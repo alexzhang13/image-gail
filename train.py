@@ -4,28 +4,33 @@ import torch.nn as nn
 import torchvision
 
 from models.gail import Disciminator, Policy, Gail
+from models.expert import Expert
 
 # add variables here for parser later
 seed = 7
+epochs = 100
 n_updates = 100
-n_iter = 100
-batch_size = 64
-
-# init environment
+batch_size = 16
+learning_rate = 1e-4
 
 # init random seeding
 np.random.seed(seed)
 torch.manual_seed(seed)
 
+
 def train_loop():
     # initialize env and expert trajectories
+    expert = Expert()
 
     # initialize models
-    gail = Gail()
+    agent = Gail(lr=lr)
+   
 
-    # loop 
-    for update in range(1, n_updates+1):
-        # sample trajectory (potentially move some update code like sampling to here)
-        gail.update()
+    # epoch loop
+    for epoch in range(1, epochs+1):
+        # rl loop for VIST dataset
+        for n_update in n_updates:
+            # sample trajectory (potentially move some update code like sampling to here)
+            agent.update()
 
 
