@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torchvision
 import torch
 
-from expert import Expert
+from models.expert import Expert
 
 class Disciminator (nn.Module):
     def __init__(self, input_dim, hidden_dim, device):
