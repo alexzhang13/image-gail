@@ -105,6 +105,14 @@ class Gail (nn.Module):
         self.loss = nn.BCELoss()
         self.l1loss = nn.L1Loss()
 
+    # imgs : B x 5 x 2048 (sampled trajectories policies)
+    # imgs_exptert: B x 5 x 2048(sampled trajectories from gt images)
+    # discriminator loss: B x 5 x 2048 ---> (B X 4) x 4096 --> discriminator (cross entroy loss, label= 1 for imgs_expert and 0 for imgs)
+    # sampling imgs --> take first image --> policy networks spits vector of size 2048 --> torch.normal(policy output, 0.01) --> use this to sample more hidden states until we get a sequence of size 5
+    # for discriminator updates: detach on imgs, imgs_expert because we do not want to update \phi.
+    # for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
+    # reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
+    # reinforce (state, rewards) --> rewards = Q.detach()
     def update(self, imgs, imgs_expert, freeze_resnet=True):
         # sample trajectories
         len_e = imgs_expert.shape[0]
