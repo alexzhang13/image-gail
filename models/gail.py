@@ -93,6 +93,7 @@ class Gail (nn.Module):
         self.lr = lr
         self.seq_length = seq_length
         self.device = device
+        self.discount = 0.99
         self.policy = Policy(2048, device)
         self.optim_policy = torch.optim.Adam(self.policy.parameters(), lr=lr)
 
@@ -110,22 +111,23 @@ class Gail (nn.Module):
 
     # ! imgs : B x 5 x 2048 (sampled trajectories policies)
     # ! imgs_exptert: B x 5 x 2048(sampled trajectories from gt images)
-    # discriminator loss: B x 5 x 2048 ---> (B X 4) x 4096 --> discriminator (cross entroy loss, label= 1 for imgs_expert and 0 for imgs)
+    # ? discriminator loss: B x 5 x 2048 ---> (B X 4) x 4096 --> discriminator (cross entroy loss, label= 1 for imgs_expert and 0 for imgs)
     # ! sampling imgs --> take first image --> policy networks spits vector of size 2048 --> torch.normal(policy output, 0.01) --> use this to sample more hidden states until we get a sequence of size 5
-    # for discriminator updates: detach on imgs, imgs_expert because we do not want to update \phi.
-    # for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
-    # reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
-    # reinforce (state, rewards) --> rewards = Q.detach()
+    # ? for discriminator updates: detach on imgs, imgs_expert because we do not want to update \phi.
+    # ? for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
+    # ? reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
+    # ? reinforce (state, rewards) --> rewards = Q.detach()
     def update(self, batch_size, sampled_states, exp_traj, freeze_resnet=True):
         exp_state = exp_traj[:,0:self.seq_length-1]
         exp_action = exp_traj[:,1:self.seq_length]
-        discrim_exp_traj = torch.cat((exp_state, exp_action), axis=2)
-        discrim_exp_traj = torch.reshape(discrim_exp_traj, (batch_size*(self.seq_length-1), -1))
+        reshaped_exp_traj = torch.cat((exp_state, exp_action), axis=2)
+        reshaped_exp_traj = torch.reshape(reshaped_exp_traj, (batch_size*(self.seq_length-1), -1))
 
         state = sampled_states[:,0:self.seq_length-1]
         action = sampled_states[:,1:self.seq_length]
-        discrim_samp_traj = torch.cat((state, action), axis=2)
-        discrim_samp_traj = torch.reshape(discrim_samp_traj, (batch_size*(self.seq_length-1), -1))
+        reshaped_samp_traj = torch.cat((state, action), axis=2)
+        reshaped_samp_traj = torch.reshape(reshaped_samp_traj, (batch_size*(self.seq_length-1), -1))
+        reshaped_state_inp = torch.reshape(state, (batch_size*(self.seq_length-1),-1))
 
         # update discriminator: discrim loss
         self.optim_discriminator.zero_grad()
@@ -134,19 +136,31 @@ class Gail (nn.Module):
         exp_label = torch.ones((batch_size*(self.seq_length-1),1), device=self.device)
         policy_label = torch.zeros((batch_size*(self.seq_length-1),1), device=self.device)
 
-        exp_prob = self.discriminator(discrim_exp_traj) 
-        policy_prob = self.discriminator(discrim_samp_traj) # detach policy output from discrim update
+        exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
+        policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach policy output from discrim update
 
         # compute discrim loss
-        discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob.detach(), policy_label)
+        discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
         discrim_loss.backward()
         self.optim_discriminator.step()
         
 
-        # update policy: get loss from discrim (wrong for now, should be policy gradient w roll out)
-        # TODO: change update function
+        # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
-        loss_policy = -self.discriminator(discrim_samp_traj.detach()) 
+        discrim_rewards = torch.reshape(policy_prob, (batch_size, (self.seq_length-1), -1))
+        log_probs = self.policy(reshaped_state_inp)
+        log_probs = torch.reshape(log_probs, (batch_size, (self.seq_length-1), -1))
+        loss_policy = 0
+
+        discount_factors = torch.Tensor([self.discount ** i for i in range(self.seq_length-1)]).to(self.device)
+
+        for i in range (self.seq_length - 1):
+            discount = discount_factors[:(self.seq_length - 1 - i)]
+            Q = discrim_rewards[:,i:] * discount.unsqueeze(1)
+            cur_reward = torch.sum(Q, dim=1)
+            log_prob = log_probs[:, i]
+            loss_policy += -1 * log_prob * (cur_reward.detach())
+
         # multiply by negative likelihood and q values
         loss_policy.mean().backward()
         self.optim_policy.step()
