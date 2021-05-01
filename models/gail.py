@@ -101,8 +101,11 @@ class Gail (nn.Module):
         self.optim_discriminator = torch.optim.Adam(self.discriminator.parameters(), lr=lr)
 
         # deep representation 
-        resnet = torchvision.models.resnet101(pretrained=True) # not sure if this is pretrained
+        resnet = torchvision.models.resnet101(pretrained=True)
         self.resnet = nn.Sequential(*list(resnet.children())[:-1]) 
+        for layer in self.resnet.layers:
+            layer.trainable = False
+        
         self.optim_resnet = torch.optim.Adam(self.resnet.parameters(), lr=lr)
   
         self.expert = Expert()
@@ -110,7 +113,7 @@ class Gail (nn.Module):
         self.l1loss = nn.L1Loss() 
 
     # ! imgs : B x 5 x 2048 (sampled trajectories policies)
-    # ! imgs_exptert: B x 5 x 2048(sampled trajectories from gt images)
+    # ! imgs_expert: B x 5 x 2048(sampled trajectories from gt images)
     # ? discriminator loss: B x 5 x 2048 ---> (B X 4) x 4096 --> discriminator (cross entroy loss, label= 1 for imgs_expert and 0 for imgs)
     # ! sampling imgs --> take first image --> policy networks spits vector of size 2048 --> torch.normal(policy output, 0.01) --> use this to sample more hidden states until we get a sequence of size 5
     # ? for discriminator updates: detach on imgs, imgs_expert because we do not want to update \phi.
@@ -162,18 +165,39 @@ class Gail (nn.Module):
             loss_policy += -1 * log_prob * (cur_reward.detach())
 
         # multiply by negative likelihood and q values
-        loss_policy.mean().backward()
+        loss_policy_mean = loss_policy.mean()
+        loss_policy_mean.backward()
         self.optim_policy.step()
 
-        # after 5 epochs? optimize
-        if not freeze_resnet:
-            pass
+    def unfreeze_resnet(self):
+        for layer in self.resnet.layers:
+            layer.trainable = True
 
-    def save(self, directory, name='GAIL'):
-        # torch.save(self.policy.state_dict(), path)
-        pass
+    def save(self, save_path, epoch):
+        torch.save({
+            'policy_state_dict': self.policy.state_dict(),
+            'discriminator_state_dict': self.discriminator.state_dict(),
+            'resnet_state_dict': self.resnet.state_dict(),
+            'optimizer_policy_state_dict': self.optim_policy.state_dict(),
+            'optimizer_discrim_state_dict': self.optim_discriminator.state_dict(),
+            'optimizer_resnet_state_dict': self.optim_resnet.state_dict(),
+            'epoch': epoch},
+        save_path)
 
-    def load(self, directory, name='GAIL'):
-        # torch.save(self.discriminator.state_dict(), path)
-        pass
+    def load(self, save_path):
+        return torch.load(save_path)
+
+    def load_checkpoint(load_path):
+        checkpoint = torch.load(load_path)
+        self.policy.load_state_dict(checkpoint['policy_state_dict'])
+        self.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+        self.resnet.load_state_dict(checkpoint['resnet_state_dict'])
+
+        self.optim_policy.load_state_dict(checkpoint['optimizer_policy_state_dict'])
+        self.optim_discriminator.load_state_dict(checkpoint['optimizer_discrim_state_dict'])
+        self.optim_resnet.load_state_dict(checkpoint['optimizer_resnet_state_dict'])
+
+        epoch = checkpoint['epoch']
+    
+        return epoch
 
