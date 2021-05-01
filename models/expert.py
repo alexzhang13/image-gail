@@ -42,9 +42,13 @@ class Expert():
         img_4 = transform.resize(img_4, (240,240,3), anti_aliasing=True)
         img_5 = transform.resize(img_5, (240,240,3), anti_aliasing=True)
         self.images = [img_1,img_2,img_3,img_4,img_5]
+        self.distractors = [img_1,img_2,img_3,img_4]
 
     def sample(self, batch_size=2):
         # convert to numpy array
         imgs = np.transpose(np.stack(self.images), (0,3,1,2))
         return np.stack([imgs]*batch_size)
 
+    def sample_distractors(self, batch_size=2):
+        imgs = np.transpose(np.stack(self.distractors), (0,3,1,2))
+        return np.stack([imgs]*batch_size)

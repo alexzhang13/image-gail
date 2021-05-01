@@ -101,16 +101,16 @@ class Gail (nn.Module):
         self.optim_discriminator = torch.optim.Adam(self.discriminator.parameters(), lr=lr)
 
         # deep representation 
-        resnet = torchvision.models.resnet101(pretrained=True)
+        resnet = torchvision.models.resnet101(pretrained=True).to(device)
         self.resnet = nn.Sequential(*list(resnet.children())[:-1]) 
-        for layer in self.resnet.layers:
-            layer.trainable = False
+        for param in self.resnet.parameters():
+            param.requires_grad = False
         
         self.optim_resnet = torch.optim.Adam(self.resnet.parameters(), lr=lr)
   
         self.expert = Expert()
-        self.loss = nn.BCELoss()
-        self.l1loss = nn.L1Loss() 
+        self.loss = nn.BCELoss().to(device)
+        self.l1loss = nn.L1Loss().to(device)
 
     # ! imgs : B x 5 x 2048 (sampled trajectories policies)
     # ! imgs_expert: B x 5 x 2048(sampled trajectories from gt images)
@@ -120,7 +120,7 @@ class Gail (nn.Module):
     # ? for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
     # ? reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
     # ? reinforce (state, rewards) --> rewards = Q.detach()
-    def update(self, batch_size, sampled_states, exp_traj, freeze_resnet=True):
+    def update(self, batch_size, sampled_states, exp_traj):
         exp_state = exp_traj[:,0:self.seq_length-1]
         exp_action = exp_traj[:,1:self.seq_length]
         reshaped_exp_traj = torch.cat((exp_state, exp_action), axis=2)
@@ -170,8 +170,8 @@ class Gail (nn.Module):
         self.optim_policy.step()
 
     def unfreeze_resnet(self):
-        for layer in self.resnet.layers:
-            layer.trainable = True
+        for param in self.resnet.parameters():
+            param.requires_grad = True
 
     def save(self, save_path, epoch):
         torch.save({
