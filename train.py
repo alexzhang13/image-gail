@@ -15,6 +15,7 @@ seq_length = 5
 n_updates = 1
 batch_size = 16
 learning_rate = 1e-4
+num_distractors = 4
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
 
@@ -65,30 +66,46 @@ def train_loop():
     # for batch in test_dataloader:
     for i in range (1):
         batch_raw = expert.sample(batch_size) # batch of images (fixed size) of length n
-        # batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
+        distractors = expert.sample_distractors(batch_size) # sample batch of distractors 
+        distractors = torch.FloatTensor(distractors).to(device)
+        distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
+
+        feat_distractors = agent.resnet(distractors)
+        feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
+
         # sample trajectories
-        imgs = agent.resnet(batch_raw[:,0]) 
-        reshaped_imgs = torch.reshape(imgs, (batch_size,-1))
-        sampled_traj = torch.unsqueeze(state, 1)
+        references = [] 
+        for i in range(seq_length):
+            imgs = agent.resnet(batch_raw[:,i]) 
+            imgs = torch.reshape(imgs, (batch_size,-1))
+            references.append(imgs)
 
-        seq_preds = []
-
+        # compare candidates and reference images
+        correct = 0
         for i in range(seq_length-1):
-            action = agent.policy(reshaped_imgs)
+            imgs = references[i]
+            refs = references[i+1]
+            
+            action = agent.policy(imgs)
             preds = torch.normal(action, 0.01)
-            seq_preds.append(preds)
 
-        # sample distractors and evaluate
-        distractors = expert.sample_distractors(batch_size)
+            # reshape for concatenation
+            preds = torch.unsqueeze(preds, dim=1)
+            refs = torch.unsqueeze(refs, dim=1)
+            candidates = torch.cat([preds, feat_distractors], dim=1)
 
+            refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
+            feat_diff = torch.norm(refs - candidates, p=2, dim=2)
+            min_indices = torch.argmin(feat_diff, dim=1).flatten()
+            zeros = min_indices == 0
+            correct += zeros.nonzero().shape[0]
+        
+        accuracy = correct / (batch_size * (seq_length - 1))
 
-    print("Done!")
+    print("Accuracy: ", accuracy)
     # agent.save("./saved_models/", 1)
-
-def nearest_neighbor():
-    pass
 
 if __name__ == "__main__":
     train_loop()
