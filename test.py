@@ -19,6 +19,7 @@ parser.add_argument('--seed', type=int, default=7)
 parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=1e-4)
+parser.add_argument('--path', default="./saved_models/checkpoint.t7")
 
 args = parser.parse_args()
 
@@ -43,7 +44,7 @@ params = {
         "OVERFIT": False,
     }
 
-def train_loop():
+def test_loop():    
     # initialize env and expert trajectories
     freeze_resnet = True
     curr_epoch_id = 0
@@ -60,39 +61,51 @@ def train_loop():
 
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
-   
-    # main training loop
-    for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
-        if epoch_id > 5 and freeze_resnet:
-            agent.unfreeze_resnet()
-            freeze_resnet = False
+    agent.load(args.path)
 
-        # rl update loop on VIST dataset
+    # Evaluation
+    dataloader.split("test")
+    for _, iter_id, batch in batch_iter(dataloader, 1):
         batch_raw = batch['images']
-        print("Epoch #{}, Batch #{}".format(epoch_id, iter_id))
-        batch_raw = np.reshape(batch_raw, (args.batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
+        distractors = batch['distractor_images']
+        distractors = torch.FloatTensor(distractors).to(device)
+        distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
+
+        feat_distractors = agent.resnet(distractors)
+        feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
+
         # sample trajectories
-        exp_traj = agent.resnet(batch_raw)
-        exp_traj = torch.reshape(exp_traj, (args.batch_size, seq_length, -1))
+        references = [] 
+        for i in range(seq_length):
+            imgs = agent.resnet(batch_raw[:,i]) 
+            imgs = torch.reshape(imgs, (batch_size,-1))
+            references.append(imgs)
 
-        state = exp_traj[:, 0] # get batch of first images of sequence
-        sampled_traj = torch.unsqueeze(state, 1)
+        # compare candidates and reference images
+        correct = 0
         for i in range(seq_length-1):
-            action = agent.policy(state)
-            sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(torch.normal(action, 0.01), 1)), 1)
+            imgs = references[i]
+            refs = references[i+1]
             
-        agent.update(args.batch_size, sampled_traj, exp_traj)
+            action = agent.policy(imgs)
+            preds = torch.normal(action, 0.01)
 
-        # save model and validation score
-        if curr_epoch_id < epoch_id:
-            save_path = "./saved_models/checkpoint" + "_epoch_" + str(epoch_id) + ".t7"
-            agent.save(save_path, epoch_id)
-            curr_epoch_id = epoch_id
+            # reshape for concatenation
+            preds = torch.unsqueeze(preds, dim=1)
+            refs = torch.unsqueeze(refs, dim=1)
+            candidates = torch.cat([preds, feat_distractors], dim=1)
 
-    save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
-    agent.save(save_path, curr_epoch_id+1)
+            refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
+            feat_diff = torch.norm(refs - candidates, p=2, dim=2)
+            min_indices = torch.argmin(feat_diff, dim=1).flatten()
+            zeros = min_indices == 0
+            correct += zeros.nonzero().shape[0]
+        
+        accuracy = correct / (batch_size * (seq_length - 1))
+
+    print("Accuracy: ", accuracy)
 
 if __name__ == "__main__":
-    train_loop()
+    test_loop()
