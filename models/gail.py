@@ -3,8 +3,6 @@ import torch.nn.functional as F
 import torchvision
 import torch
 
-from models.expert import Expert
-
 class Discriminator (nn.Module):
     def __init__(self, input_dim, device):
         super(Discriminator, self).__init__()
@@ -108,7 +106,6 @@ class Gail (nn.Module):
         
         self.optim_resnet = torch.optim.Adam(self.resnet.parameters(), lr=lr)
   
-        self.expert = Expert()
         self.loss = nn.BCELoss().to(device)
         self.l1loss = nn.L1Loss().to(device)
 
@@ -168,6 +165,8 @@ class Gail (nn.Module):
         loss_policy_mean = loss_policy.mean()
         loss_policy_mean.backward()
         self.optim_policy.step()
+
+        return discrim_loss.mean(), loss_policy_mean
 
     def unfreeze_resnet(self):
         for param in self.resnet.parameters():
