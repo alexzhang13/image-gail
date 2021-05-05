@@ -146,6 +146,7 @@ class Gail (nn.Module):
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
         # compute discrim loss
+        print(self.discriminator.fc1.requires_grad)
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
         discrim_loss_mean = discrim_loss.mean()
         discrim_loss.backward()
