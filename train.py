@@ -49,7 +49,11 @@ def train_loop():
     # initialize env and expert trajectories
     freeze_resnet = True
     curr_epoch_id = 0
-    vist_dataset_images = VISTDatasetImages(params)
+    vist_dataset_images_train = VISTDatasetImages(params)
+    vist_dataset_images_valid = VISTDatasetImages(params)
+    vist_dataset_images_train.split("train")
+    vist_dataset_images_valid.split("val")
+
     dataloader = DataLoader(
         vist_dataset_images,
         batch_size=args.batch_size,
@@ -61,7 +65,7 @@ def train_loop():
     )
 
     val_dataloader = DataLoader(
-        vist_dataset_images,
+        vist_dataset_images_valid,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=4,
@@ -107,8 +111,7 @@ def train_loop():
             curr_epoch_id = epoch_id
 
         # validation
-        dataloader.split("val")
-        for _, iter_id, batch in batch_iter(dataloader, 1):
+        for _, iter_id, batch in batch_iter(val_dataloader, 1):
             batch_raw = batch['images']
             batch_raw = torch.FloatTensor(batch_raw).to(device)
 

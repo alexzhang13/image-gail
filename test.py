@@ -19,12 +19,12 @@ parser.add_argument('--seed', type=int, default=7)
 parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=1e-4)
-parser.add_argument('--path', default="./saved_models/checkpoint.t7")
+parser.add_argument('--path', default="./saved_models/checkpoint_epoch_1.t7")
 
 args = parser.parse_args()
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 # init random seeding
 np.random.seed(args.seed)
@@ -49,6 +49,7 @@ def test_loop():
     freeze_resnet = True
     curr_epoch_id = 0
     vist_dataset_images = VISTDatasetImages(params)
+    vist_dataset_images.split("test")
     dataloader = DataLoader(
         vist_dataset_images,
         batch_size=args.batch_size,
@@ -64,7 +65,6 @@ def test_loop():
     agent.load(args.path)
 
     # Evaluation
-    dataloader.split("test")
     for _, iter_id, batch in batch_iter(dataloader, 1):
         batch_raw = batch['images']
         batch_raw = torch.FloatTensor(batch_raw).to(device)
