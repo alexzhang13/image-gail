@@ -69,13 +69,14 @@ def train_loop():
 
         # rl update loop on VIST dataset
         batch_raw = batch['images']
+        batch_size = batch_raw.shape[0]
         print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
-        batch_raw = np.reshape(batch_raw, (args.batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
+        batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
         # sample trajectories
         exp_traj = agent.resnet(batch_raw)
-        exp_traj = torch.reshape(exp_traj, (args.batch_size, seq_length, -1))
+        exp_traj = torch.reshape(exp_traj, (batch_size, seq_length, -1))
 
         state = exp_traj[:, 0] # get batch of first images of sequence
         sampled_traj = torch.unsqueeze(state, 1)
@@ -83,7 +84,7 @@ def train_loop():
             action = agent.policy(state)
             sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(torch.normal(action, 0.01), 1)), 1)
             
-        discrim_loss, gen_loss = agent.update(args.batch_size, sampled_traj, exp_traj)
+        discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj)
         print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
 
         # save model and validation score
