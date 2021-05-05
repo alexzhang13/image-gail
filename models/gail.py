@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import torch
+import pdb
 
 class Discriminator (nn.Module):
     def __init__(self, input_dim, device):
@@ -151,12 +152,16 @@ class Gail (nn.Module):
         exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
+
+        print(exp_prob)
+        print(policy_prob)
+
         # compute discrim loss
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
         print(discrim_loss)
 
         discrim_loss_mean = discrim_loss.mean()
-        discrim_loss.backward()
+        discrim_loss_mean.backward()
         self.optim_discriminator.step()
         
         '''

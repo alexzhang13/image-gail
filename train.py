@@ -3,6 +3,7 @@ import numpy as np
 import torch 
 import torch.nn as nn 
 import torchvision
+import pdb
 from torch.utils.data import DataLoader
 
 from models.gail import Discriminator, Policy, Gail
@@ -71,6 +72,7 @@ def train_loop():
         # rl update loop on VIST dataset
         batch_raw = batch['images']
         batch_size = batch_raw.shape[0]
+
         print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
         batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
