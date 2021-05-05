@@ -109,6 +109,12 @@ class Gail (nn.Module):
         self.loss = nn.BCELoss().to(device)
         self.l1loss = nn.L1Loss().to(device)
 
+        # cuda
+        if torch.cuda_is_available():
+            self.resnet.cuda()
+            self.policy.cuda()
+            self.discriminator.cuda()
+
     # ! imgs : B x 5 x 2048 (sampled trajectories policies)
     # ! imgs_expert: B x 5 x 2048(sampled trajectories from gt images)
     # ? discriminator loss: B x 5 x 2048 ---> (B X 4) x 4096 --> discriminator (cross entroy loss, label= 1 for imgs_expert and 0 for imgs)
