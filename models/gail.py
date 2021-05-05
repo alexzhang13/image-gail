@@ -30,7 +30,7 @@ class Discriminator (nn.Module):
         l2 = F.relu(l2)
 
         l3 = self.fc3(l2)
-        out = F.softmax(l3, dim=1)
+        out = F.sigmoid(l3)
         return out
 
 
