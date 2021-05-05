@@ -60,6 +60,16 @@ def train_loop():
         collate_fn=prune_illegal_collate,
     )
 
+    val_dataloader = DataLoader(
+        vist_dataset_images,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=4,
+        drop_last=True,
+        pin_memory=False,
+        collate_fn=prune_illegal_collate,
+    )
+
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
    
@@ -95,6 +105,50 @@ def train_loop():
             save_path = "./saved_models/checkpoint" + "_epoch_" + str(epoch_id) + ".t7"
             agent.save(save_path, epoch_id)
             curr_epoch_id = epoch_id
+
+        # validation
+        dataloader.split("val")
+        for _, iter_id, batch in batch_iter(dataloader, 1):
+            batch_raw = batch['images']
+            batch_raw = torch.FloatTensor(batch_raw).to(device)
+
+            distractors = batch['distractor_images']
+            distractors = torch.FloatTensor(distractors).to(device)
+            distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
+
+            feat_distractors = agent.resnet(distractors)
+            feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
+
+            # sample trajectories
+            references = [] 
+            for i in range(seq_length):
+                imgs = agent.resnet(batch_raw[:,i]) 
+                imgs = torch.reshape(imgs, (batch_size,-1))
+                references.append(imgs)
+
+            # compare candidates and reference images
+            correct = 0
+            for i in range(seq_length-1):
+                imgs = references[i]
+                refs = references[i+1]
+                
+                action = agent.policy(imgs)
+                preds = torch.normal(action, 0.01)
+
+                # reshape for concatenation
+                preds = torch.unsqueeze(preds, dim=1)
+                refs = torch.unsqueeze(refs, dim=1)
+                candidates = torch.cat([preds, feat_distractors], dim=1)
+
+                refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
+                feat_diff = torch.norm(refs - candidates, p=2, dim=2)
+                min_indices = torch.argmin(feat_diff, dim=1).flatten()
+                zeros = min_indices == 0
+                correct += zeros.nonzero().shape[0]
+            
+            accuracy = correct / (batch_size * (seq_length - 1))
+
+        print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id+1, accuracy))
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
     agent.save(save_path, curr_epoch_id+1)
