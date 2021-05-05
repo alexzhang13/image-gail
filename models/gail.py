@@ -93,9 +93,15 @@ class Gail (nn.Module):
         self.device = device
         self.discount = 0.99
         self.policy = Policy(2048, device)
+        for param in self.policy.parameters():
+            param.requires_grad = True
+        
         self.optim_policy = torch.optim.Adam(self.policy.parameters(), lr=lr)
 
         self.discriminator = Discriminator(input_dim, device)
+        for param in self.discriminator.parameters():
+            param.requires_grad = True
+
         self.optim_discriminator = torch.optim.Adam(self.discriminator.parameters(), lr=lr)
 
         # deep representation 
@@ -146,8 +152,9 @@ class Gail (nn.Module):
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
         # compute discrim loss
-        print(self.discriminator.fc1.requires_grad)
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
+        print(discrim_loss)
+        
         discrim_loss_mean = discrim_loss.mean()
         discrim_loss.backward()
         self.optim_discriminator.step()
