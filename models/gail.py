@@ -110,7 +110,7 @@ class Gail (nn.Module):
         self.l1loss = nn.L1Loss().to(device)
 
         # cuda
-        if torch.cuda_is_available():
+        if torch.cuda.is_available():
             self.resnet.cuda()
             self.policy.cuda()
             self.discriminator.cuda()
