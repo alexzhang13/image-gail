@@ -152,19 +152,13 @@ class Gail (nn.Module):
         exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
-
-        print(exp_prob)
-        print(policy_prob)
-
         # compute discrim loss
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
-        print(discrim_loss)
 
         discrim_loss_mean = discrim_loss.mean()
         discrim_loss_mean.backward()
         self.optim_discriminator.step()
         
-        '''
         # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
         discrim_rewards = torch.reshape(policy_prob, (batch_size, (self.seq_length-1), -1))
@@ -186,8 +180,8 @@ class Gail (nn.Module):
         loss_policy_mean.backward()
         self.optim_policy.step()
 
-        return discrim_loss_mean, loss_policy_mean'''
-        return discrim_loss_mean, 0
+        return discrim_loss_mean, loss_policy_mean
+        
 
     def unfreeze_resnet(self):
         for param in self.resnet.parameters():
