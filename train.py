@@ -55,7 +55,7 @@ def train_loop():
     vist_dataset_images_valid.split = "val"
 
     dataloader = DataLoader(
-        vist_dataset_images,
+        vist_dataset_images_train,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=4,
