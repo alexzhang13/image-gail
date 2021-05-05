@@ -22,8 +22,8 @@ parser.add_argument('--lr', type=float, default=1e-4)
 
 args = parser.parse_args()
 
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 
 # init random seeding
 np.random.seed(args.seed)
@@ -63,13 +63,13 @@ def train_loop():
    
     # main training loop
     for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
-        if epoch_id > 5 and freeze_resnet:
+        if epoch_id >= 5 and freeze_resnet:
             agent.unfreeze_resnet()
             freeze_resnet = False
 
         # rl update loop on VIST dataset
         batch_raw = batch['images']
-        print("Epoch #{}, Batch #{}".format(epoch_id, iter_id))
+        print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
         batch_raw = np.reshape(batch_raw, (args.batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
