@@ -67,6 +67,7 @@ def test_loop():
     # Evaluation
     for _, iter_id, batch in batch_iter(dataloader, 1):
         batch_raw = batch['images']
+        batch_size = batch_raw.shape[0]
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
         distractors = batch['distractor_images']

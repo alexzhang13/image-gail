@@ -110,48 +110,49 @@ def train_loop():
             agent.save(save_path, epoch_id)
             curr_epoch_id = epoch_id
 
-        # validation
-        for _, iter_id, batch in batch_iter(val_dataloader, 1):
-            batch_raw = batch['images']
-            batch_raw = torch.FloatTensor(batch_raw).to(device)
+            # validation
+            with torch.no_grad():
+                for _, iter_id, batch in batch_iter(val_dataloader, 1):
+                    batch_raw = batch['images']
+                    batch_size = batch_raw.shape[0]
+                    batch_raw = torch.FloatTensor(batch_raw).to(device)
 
-            distractors = batch['distractor_images']
-            distractors = torch.FloatTensor(distractors).to(device)
-            distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
+                    distractors = batch['distractor_images']
+                    distractors = torch.FloatTensor(distractors).to(device)
+                    distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
 
-            feat_distractors = agent.resnet(distractors)
-            feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
+                    feat_distractors = agent.resnet(distractors)
+                    feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
 
-            # sample trajectories
-            references = [] 
-            for i in range(seq_length):
-                imgs = agent.resnet(batch_raw[:,i]) 
-                imgs = torch.reshape(imgs, (batch_size,-1))
-                references.append(imgs)
+                    # sample trajectories
+                    references = [] 
+                    for i in range(seq_length):
+                        imgs = agent.resnet(batch_raw[:,i]) 
+                        imgs = torch.reshape(imgs, (batch_size,-1))
+                        references.append(imgs)
 
-            # compare candidates and reference images
-            correct = 0
-            for i in range(seq_length-1):
-                imgs = references[i]
-                refs = references[i+1]
-                
-                action = agent.policy(imgs)
-                preds = torch.normal(action, 0.01)
+                    # compare candidates and reference images
+                    correct = 0
+                    for i in range(seq_length-1):
+                        imgs = references[i]
+                        refs = references[i+1]
+                        
+                        action = agent.policy(imgs)
+                        preds = torch.normal(action, 0.01)
 
-                # reshape for concatenation
-                preds = torch.unsqueeze(preds, dim=1)
-                refs = torch.unsqueeze(refs, dim=1)
-                candidates = torch.cat([preds, feat_distractors], dim=1)
+                        # reshape for concatenation
+                        preds = torch.unsqueeze(preds, dim=1)
+                        refs = torch.unsqueeze(refs, dim=1)
+                        candidates = torch.cat([preds, feat_distractors], dim=1)
 
-                refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
-                feat_diff = torch.norm(refs - candidates, p=2, dim=2)
-                min_indices = torch.argmin(feat_diff, dim=1).flatten()
-                zeros = min_indices == 0
-                correct += zeros.nonzero().shape[0]
-            
-            accuracy = correct / (batch_size * (seq_length - 1))
-
-        print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id+1, accuracy))
+                        refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
+                        feat_diff = torch.norm(refs - candidates, p=2, dim=2)
+                        min_indices = torch.argmin(feat_diff, dim=1).flatten()
+                        zeros = min_indices == 0
+                        correct += zeros.nonzero().shape[0]
+                    
+                    accuracy = correct / (batch_size * (seq_length - 1))
+            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id+1, accuracy))
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
     agent.save(save_path, curr_epoch_id+1)
