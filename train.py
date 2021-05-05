@@ -83,7 +83,8 @@ def train_loop():
             action = agent.policy(state)
             sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(torch.normal(action, 0.01), 1)), 1)
             
-        agent.update(args.batch_size, sampled_traj, exp_traj)
+        discrim_loss, gen_loss = agent.update(args.batch_size, sampled_traj, exp_traj)
+        print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
 
         # save model and validation score
         if curr_epoch_id < epoch_id:
