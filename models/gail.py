@@ -29,7 +29,7 @@ class Discriminator (nn.Module):
         l2 = F.relu(l2)
 
         l3 = self.fc3(l2)
-        out = F.softmax(l3)
+        out = F.softmax(l3, dim=1)
         return out
 
 
@@ -154,12 +154,12 @@ class Gail (nn.Module):
         # compute discrim loss
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
         print(discrim_loss)
-        
+
         discrim_loss_mean = discrim_loss.mean()
         discrim_loss.backward()
         self.optim_discriminator.step()
         
-
+        '''
         # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
         discrim_rewards = torch.reshape(policy_prob, (batch_size, (self.seq_length-1), -1))
@@ -181,7 +181,8 @@ class Gail (nn.Module):
         loss_policy_mean.backward()
         self.optim_policy.step()
 
-        return discrim_loss_mean, loss_policy_mean
+        return discrim_loss_mean, loss_policy_mean'''
+        return discrim_loss_mean, 0
 
     def unfreeze_resnet(self):
         for param in self.resnet.parameters():

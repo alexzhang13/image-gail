@@ -28,6 +28,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # init random seeding
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
+torch.set_printoptions(precision=10)
 
 # dataloader params
 seq_length = 5
@@ -95,6 +96,7 @@ def train_loop():
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
     agent.save(save_path, curr_epoch_id+1)
+    print("Done.")
 
 if __name__ == "__main__":
     train_loop()
