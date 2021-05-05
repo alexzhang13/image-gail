@@ -49,7 +49,7 @@ def test_loop():
     freeze_resnet = True
     curr_epoch_id = 0
     vist_dataset_images = VISTDatasetImages(params)
-    vist_dataset_images.split("test")
+    vist_dataset_images.split = "test"
     dataloader = DataLoader(
         vist_dataset_images,
         batch_size=args.batch_size,

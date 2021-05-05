@@ -51,8 +51,8 @@ def train_loop():
     curr_epoch_id = 0
     vist_dataset_images_train = VISTDatasetImages(params)
     vist_dataset_images_valid = VISTDatasetImages(params)
-    vist_dataset_images_train.split("train")
-    vist_dataset_images_valid.split("val")
+    vist_dataset_images_train.split = "train"
+    vist_dataset_images_valid.split = "val"
 
     dataloader = DataLoader(
         vist_dataset_images,
