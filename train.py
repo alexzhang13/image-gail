@@ -80,7 +80,7 @@ def train_loop():
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
    
     # main training loop
-    for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
+    for epoch_id, iter_id, batch in batch_iter(val_dataloader, args.epochs):
         if epoch_id >= 5 and freeze_resnet:
             agent.unfreeze_resnet()
             freeze_resnet = False
