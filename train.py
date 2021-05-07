@@ -26,6 +26,8 @@ args = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
+print(device)
+
 # init random seeding
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
@@ -152,7 +154,7 @@ def train_loop():
                         correct += zeros.nonzero().shape[0]
                     
                     accuracy = correct / (batch_size * (seq_length - 1))
-            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id+1, accuracy))
+            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy))
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
     agent.save(save_path, curr_epoch_id+1)

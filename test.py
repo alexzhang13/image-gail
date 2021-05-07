@@ -100,6 +100,7 @@ def test_loop():
 
             refs = torch.repeat_interleave(refs, num_distractors+1, dim=1)
             feat_diff = torch.norm(refs - candidates, p=2, dim=2)
+            print(feat_diff)
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             zeros = min_indices == 0
             correct += zeros.nonzero().shape[0]
