@@ -130,7 +130,7 @@ class Gail (nn.Module):
     # ? for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
     # ? reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
     # ? reinforce (state, rewards) --> rewards = Q.detach()
-    def update(self, batch_size, sampled_states, exp_traj):
+    def update(self, batch_size, sampled_states, exp_traj, log_probs):
         exp_state = exp_traj[:,0:self.seq_length-1]
         exp_action = exp_traj[:,1:self.seq_length]
         reshaped_exp_traj = torch.cat((exp_state, exp_action), axis=2)
@@ -140,7 +140,7 @@ class Gail (nn.Module):
         action = sampled_states[:,1:self.seq_length]
         reshaped_samp_traj = torch.cat((state, action), axis=2)
         reshaped_samp_traj = torch.reshape(reshaped_samp_traj, (batch_size*(self.seq_length-1), -1))
-        reshaped_state_inp = torch.reshape(state, (batch_size*(self.seq_length-1),-1))
+        # reshaped_state_inp = torch.reshape(state, (batch_size*(self.seq_length-1),-1))
 
         # update discriminator: discrim loss
         self.optim_discriminator.zero_grad()
@@ -163,8 +163,6 @@ class Gail (nn.Module):
         # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
         discrim_rewards = torch.reshape(policy_prob, (batch_size, (self.seq_length-1), -1))
-        log_probs = self.policy(reshaped_state_inp)
-        log_probs = torch.reshape(log_probs, (batch_size, (self.seq_length-1), -1))
         loss_policy = 0
 
         discount_factors = torch.Tensor([self.discount ** i for i in range(self.seq_length-1)]).to(self.device)
@@ -172,10 +170,14 @@ class Gail (nn.Module):
         for i in range (self.seq_length - 1):
             discount = discount_factors[:(self.seq_length - 1 - i)]
             Q = discrim_rewards[:,i:] * discount.unsqueeze(1)
-            print(Q)
             cur_reward = torch.sum(Q, dim=1)
-            log_prob = log_probs[:, i]
+            log_prob = log_probs[i]
+            print("Log Prob: ")
+            print(log_prob)
+            print("Curr Reward: ")
+            print(cur_reward)
             loss_policy += -1 * log_prob * (cur_reward.detach())
+            
 
         # multiply by negative likelihood and q values
         loss_policy_mean = loss_policy.mean()

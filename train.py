@@ -48,6 +48,14 @@ params = {
         "OVERFIT": False,
     }
 
+
+def normal(action, action_prob, sigma):
+    exponent = -0.5 * torch.pow((action - action_prob)/sigma, 2)
+    f = 1/(sigma * math.sqrt(2 * math.pi)) * torch.exp(exponent)
+    log_probs = torch.log(f)
+    prob = torch.sum(log_probs, axis=1)
+    return prob
+
 def train_loop():
     # initialize env and expert trajectories
     freeze_resnet = True
@@ -132,7 +140,7 @@ def train_loop():
                     zeros = min_indices == 0
                     correct += zeros.nonzero().shape[0]
                     
-                    accuracy = correct / (batch_size * (seq_length - 1))
+                    accuracy = correct / (batch_size)
             print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy))
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
@@ -153,17 +161,22 @@ def train_loop():
 
         state = exp_traj[:, 0] # get batch of first images of sequence
         sampled_traj = torch.unsqueeze(state, 1)
+        log_probs = []
         for i in range(seq_length-1):
             action = agent.policy(state)
-            sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(torch.normal(action, 0.01), 1)), 1)
+            action_prob = torch.normal(action, 0.01)
+            log_prob = normal(action, action_prob, 0.01)
+            log_probs.append(log_prob) # L x B x 1
+            sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
             
-        discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj)
+        discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs)
         print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
 
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
     agent.save(save_path, curr_epoch_id+1)
     print("Done.")
+
 
 if __name__ == "__main__":
     train_loop()
