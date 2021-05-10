@@ -33,7 +33,7 @@ print(device)
 # init random seeding
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-torch.set_printoptions(precision=10)
+torch.set_printoptions(precision=10, edgeitems=1)
 
 # dataloader params
 seq_length = 5
