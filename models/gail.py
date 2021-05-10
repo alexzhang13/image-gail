@@ -151,14 +151,15 @@ class Gail (nn.Module):
 
         exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
-
+        '''
         # compute discrim loss
         discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
 
         discrim_loss_mean = discrim_loss.mean()
         discrim_loss_mean.backward()
         self.optim_discriminator.step()
-        
+        '''
+        discrim_loss_mean = 0
         # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
         discrim_rewards = torch.reshape(policy_prob, (batch_size, (self.seq_length-1), -1))
