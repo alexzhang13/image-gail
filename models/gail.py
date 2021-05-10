@@ -101,7 +101,7 @@ class Gail (nn.Module):
 
         self.discriminator = Discriminator(input_dim, device)
         for param in self.discriminator.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
         self.optim_discriminator = torch.optim.Adam(self.discriminator.parameters(), lr=lr)
 
@@ -171,6 +171,7 @@ class Gail (nn.Module):
         for i in range (self.seq_length - 1):
             discount = discount_factors[:(self.seq_length - 1 - i)]
             Q = discrim_rewards[:,i:] * discount.unsqueeze(1)
+            print(Q)
             cur_reward = torch.sum(Q, dim=1)
             log_prob = log_probs[:, i]
             loss_policy += -1 * log_prob * (cur_reward.detach())
