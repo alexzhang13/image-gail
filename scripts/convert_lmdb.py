@@ -34,13 +34,13 @@ def process_images(img_root, out_path):
     for p in tqdm(all_paths):
         try:
             loaded_image = transform(Image.open(p).convert("RGB"))
-            loaded_image = np.array(loaded_image)
+            loaded_image = loaded_image.numpy()
         except:
             print("image corrupt: %s"%p)
             continue
         key = os.path.basename(p)
-        print("Img Num: ", img_num, end="")
-        print("\t Key: ", key, end="\n")
+        # print("Img Num: ", img_num, end="")
+        # print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
             txn.put(key.encode(), loaded_image.tobytes())
 
