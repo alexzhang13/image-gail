@@ -34,6 +34,7 @@ def process_images(img_root, out_path):
     for p in tqdm(all_paths):
         try:
             loaded_image = transform(Image.open(p).convert("RGB"))
+            loaded_image = np.array(loaded_image)
         except:
             print("image corrupt: %s"%p)
             continue
@@ -41,9 +42,7 @@ def process_images(img_root, out_path):
         print("Img Num: ", img_num, end="")
         print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
-            torch.save(loaded_image, buff)
-            buff.seek(0)
-            txn.put(key.encode(), buff.read())
+            txn.put(key.encode(), loaded_image.tobytes())
 
 for split in splits:
     process_images(os.path.join(IMAGE_ROOT, split), os.path.join(OUT_DIR, "image-feats-%s"%split))
