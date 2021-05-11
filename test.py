@@ -74,7 +74,7 @@ def test_loop():
             batch_size = batch_raw.shape[0]
             batch_raw = torch.FloatTensor(batch_raw).to(device)
 
-            distractors = batch['distractor_images']
+            distractors = _batch['distractor_images']
             distractors = torch.FloatTensor(distractors).to(device)
             distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
 
