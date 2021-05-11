@@ -52,10 +52,10 @@ def test_loop():
     vist_dataset_images.split = "val"
     dataloader = DataLoader(
         vist_dataset_images,
-        batch_size=args.batch_size,
+        batch_size=2*args.batch_size,
         shuffle=True,
         num_workers=4,
-        drop_last=True,
+        drop_last=False,
         pin_memory=False,
         collate_fn=prune_illegal_collate,
     )
