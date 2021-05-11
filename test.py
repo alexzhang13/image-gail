@@ -7,7 +7,6 @@ import torchvision
 from torch.utils.data import DataLoader
 
 from models.gail import Discriminator, Policy, Gail
-from models.expert import Expert
 
 from dataloader.vist_images_dataloader import VISTDatasetImages
 from utils.helper_utils import prune_illegal_collate, batch_iter
