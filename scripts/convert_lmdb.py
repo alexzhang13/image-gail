@@ -1,5 +1,6 @@
 import glob
 import os
+import io
 from PIL import Image
 from torchvision import models, transforms
 from torchvision import models, transforms
@@ -24,6 +25,7 @@ def process_images(img_root, out_path):
         os.makedirs(out_path)
 
     img_num = 0
+    buff = io.BytesIO()
     transform = get_default_transform()
     env = lmdb.open(out_path, map_size=1099511627776)
 
@@ -39,7 +41,9 @@ def process_images(img_root, out_path):
         print("Img Num: ", img_num, end="")
         print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
-            txn.put(key.encode(), loaded_image.encode())
+            torch.save(loaded_image, buff)
+            buff.seek(0)
+            txn.put(key.encode(), buff.read())
 
 for split in splits:
     process_images(os.path.join(IMAGE_ROOT, split), os.path.join(OUT_DIR, "image-feats-%s"%split))
