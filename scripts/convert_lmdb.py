@@ -14,7 +14,7 @@ def get_default_transform():
     return transforms.Compose(
         [
             transforms.Resize((512, 512)),
-            # transforms.ToTensor(),
+            transforms.ToTensor(),
         ]
     )
 
@@ -39,7 +39,7 @@ def process_images(img_root, out_path):
         print("Img Num: ", img_num, end="")
         print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
-            txn.put(key.encode(), loaded_image)
+            txn.put(key.encode(), loaded_image.encode())
 
 for split in splits:
     process_images(os.path.join(IMAGE_ROOT, split), os.path.join(OUT_DIR, "image-feats-%s"%split))
