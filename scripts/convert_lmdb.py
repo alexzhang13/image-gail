@@ -20,6 +20,9 @@ def get_default_transform():
 
 
 def process_images(img_root, out_path):
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+
     img_num = 0
     transform = get_default_transform()
     env = lmdb.open(out_path, map_size=1099511627776)
