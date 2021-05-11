@@ -20,6 +20,7 @@ def get_default_transform():
 
 
 def process_images(img_root, out_path):
+    img_num = 0
     transform = get_default_transform()
     env = lmdb.open(out_path, map_size=1099511627776)
 
@@ -32,6 +33,8 @@ def process_images(img_root, out_path):
             print("image corrupt: %s"%p)
             continue
         key = os.path.basename(p)
+        print("Img Num: ", img_num, end="")
+        print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
             txn.put(key.encode(), loaded_image)
 
