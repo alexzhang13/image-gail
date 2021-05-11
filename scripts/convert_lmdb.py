@@ -14,7 +14,7 @@ def get_default_transform():
     return transforms.Compose(
         [
             transforms.Resize((512, 512)),
-            transforms.ToTensor(),
+            # transforms.ToTensor(),
         ]
     )
 
