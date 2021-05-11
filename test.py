@@ -20,7 +20,7 @@ parser.add_argument('--seed', type=int, default=7)
 parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=1e-4)
-parser.add_argument('--path', default="./saved_models/checkpoint_epoch_1.t7")
+parser.add_argument('--path', default="./saved_models/checkpoint_epoch_20.t7")
 
 args = parser.parse_args()
 
@@ -50,7 +50,7 @@ def test_loop():
     freeze_resnet = True
     curr_epoch_id = 0
     vist_dataset_images = VISTDatasetImages(params)
-    vist_dataset_images.split = "test"
+    vist_dataset_images.split = "val"
     dataloader = DataLoader(
         vist_dataset_images,
         batch_size=args.batch_size,
@@ -66,32 +66,37 @@ def test_loop():
     agent.load(args.path)
 
     # Evaluation
-    for _, iter_id, batch in batch_iter(dataloader, 1):
-        batch_raw = batch['images']
-        batch_size = batch_raw.shape[0]
-        batch_raw = torch.FloatTensor(batch_raw).to(device)
+    with torch.no_grad():
+        accuracy = 0
+        __iter_id = 0
+        for _, _iter_id, _batch in batch_iter(dataloader, 1):
+            batch_raw = _batch['images']
+            batch_size = batch_raw.shape[0]
+            batch_raw = torch.FloatTensor(batch_raw).to(device)
 
-        distractors = batch['distractor_images']
-        distractors = torch.FloatTensor(distractors).to(device)
-        distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
+            distractors = batch['distractor_images']
+            distractors = torch.FloatTensor(distractors).to(device)
+            distractors = torch.reshape(distractors, (batch_size*num_distractors, distractors.shape[2], distractors.shape[3], distractors.shape[4])) 
 
-        feat_distractors = agent.resnet(distractors)
-        feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
+            feat_distractors = agent.resnet(distractors)
+            feat_distractors = torch.reshape(feat_distractors, (batch_size,num_distractors,-1))
 
-        # sample trajectories
-        references = [] 
-        for i in range(seq_length):
-            imgs = agent.resnet(batch_raw[:,i]) 
-            imgs = torch.reshape(imgs, (batch_size,-1))
-            references.append(imgs)
+            # sample trajectories
+            references = [] 
+            for i in range(seq_length):
+                imgs = agent.resnet(batch_raw[:,i]) 
+                imgs = torch.reshape(imgs, (batch_size,-1))
+                references.append(imgs)
 
-        # compare candidates and reference images
-        correct = 0
-        for i in range(seq_length-1):
+            # compare candidates and reference images
+            correct = 0
+            # for i in range(seq_length-1):
+            i = 3
             imgs = references[i]
             refs = references[i+1]
+                
             action = agent.policy(imgs)
-            preds = torch.normal(action, 0.01)
+            preds = torch.normal(action, 1)
 
             # reshape for concatenation
             preds = torch.unsqueeze(preds, dim=1)
@@ -100,13 +105,16 @@ def test_loop():
 
             preds = torch.repeat_interleave(preds, num_distractors+1, dim=1)
             feat_diff = torch.norm(preds - candidates, p=2, dim=2)
+            print(feat_diff)
+
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             zeros = min_indices == 0
             correct += zeros.nonzero().shape[0]
-        
-        accuracy = correct / (batch_size)
+            
+            accuracy += correct / (batch_size)
+            __iter_id = _iter_id
 
-    print("Accuracy: ", accuracy)
+    print("[Accuracy: %f]\n" % (epoch_id, accuracy/(iter_id+1)))
 
 if __name__ == "__main__":
     test_loop()
