@@ -39,8 +39,8 @@ def process_images(img_root, out_path):
             print("image corrupt: %s"%p)
             continue
         key = os.path.basename(p)
-        # print("Img Num: ", img_num, end="")
-        # print("\t Key: ", key, end="\n")
+        print("Img Num: ", img_num, end="")
+        print("\t Key: ", key, end="\n")
         with env.begin(write=True) as txn:
             txn.put(key.encode(), loaded_image.tobytes())
 
