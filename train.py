@@ -77,10 +77,10 @@ def train_loop():
 
     val_dataloader = DataLoader(
         vist_dataset_images_valid,
-        batch_size=args.batch_size,
+        batch_size=2 * args.batch_size,
         shuffle=True,
         num_workers=4,
-        drop_last=True,
+        drop_last=False,
         pin_memory=False,
         collate_fn=prune_illegal_collate,
     )
@@ -89,7 +89,7 @@ def train_loop():
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
    
     # main training loop
-    for epoch_id, iter_id, batch in batch_iter(val_dataloader, args.epochs):
+    for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
         # save model and validation score
         if curr_epoch_id < epoch_id:
             save_path = "./saved_models/checkpoint" + "_epoch_" + str(epoch_id) + ".t7"
@@ -145,7 +145,7 @@ def train_loop():
                     accuracy += correct / (batch_size)
                     __iter_id = _iter_id
 
-            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy/(iter_id+1)))
+            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1)))
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
             agent.unfreeze_resnet()
