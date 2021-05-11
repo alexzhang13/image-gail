@@ -171,10 +171,6 @@ class Gail (nn.Module):
             Q = discrim_rewards[:,i:] * discount.unsqueeze(1)
             cur_reward = torch.sum(Q, dim=1)
             log_prob = log_probs[i]
-            print("Log Prob: ")
-            print(log_prob)
-            print("Curr Reward: ")
-            print(cur_reward)
             loss_policy += -1 * log_prob * (cur_reward.detach())
             
 

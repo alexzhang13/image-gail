@@ -99,8 +99,10 @@ def train_loop():
 
             # validation
             with torch.no_grad():
-                for _, iter_id, batch in batch_iter(val_dataloader, 1):
-                    batch_raw = batch['images']
+                accuracy = 0
+                __iter_id = 0
+                for _, _iter_id, _batch in batch_iter(val_dataloader, 1):
+                    batch_raw = _batch['images']
                     batch_size = batch_raw.shape[0]
                     batch_raw = torch.FloatTensor(batch_raw).to(device)
 
@@ -126,7 +128,7 @@ def train_loop():
                     refs = references[i+1]
                         
                     action = agent.policy(imgs)
-                    preds = torch.normal(action, 0.01)
+                    preds = torch.normal(action, 1)
 
                     # reshape for concatenation
                     preds = torch.unsqueeze(preds, dim=1)
@@ -141,8 +143,10 @@ def train_loop():
                     zeros = min_indices == 0
                     correct += zeros.nonzero().shape[0]
                     
-                    accuracy = correct / (batch_size)
-            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy))
+                    accuracy += correct / (batch_size)
+                    __iter_id = _iter_id
+
+            print("[Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy/(iter_id+1)))
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
             agent.unfreeze_resnet()
@@ -165,8 +169,8 @@ def train_loop():
         log_probs = []
         for i in range(seq_length-1):
             action = agent.policy(state)
-            action_prob = torch.normal(action, 0.01)
-            log_prob = normal(action, action_prob, 0.01)
+            action_prob = torch.normal(action, 1)
+            log_prob = normal(action, action_prob, 1)
             log_probs.append(log_prob) # L x B x 1
             sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
             
