@@ -3,9 +3,9 @@ import os
 import io
 from PIL import Image
 from torchvision import models, transforms
-from torchvision import models, transforms
 from tqdm import tqdm
 import lmdb
+import torch
 
 IMAGE_ROOT = "/n/fs/nlp-murahari/datasets/VIST/images"
 splits = ["train", "val", "test"]
