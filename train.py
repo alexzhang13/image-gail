@@ -170,13 +170,13 @@ def train_loop():
     agent = Gail(input_dim=(2*2048), lr=lr, seq_length=seq_length, device=device)
    
     print("time:%s \t Training Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
-    if not os.path.exists("./saved_models/" + args.name):
-                os.makedirs("./saved_models/" + args.name)
+    if not os.path.exists("./saved_models/" + args.name + "/"):
+        os.makedirs("./saved_models/" + args.name + "/")
 
     if not os.path.exists("./logger/" + args.name):
-                os.makedirs("./logger/" + args.name)
+        os.makedirs("./logger/" + args.name)
 
-    logging.basicConfig(level=logging.DEBUG, filename="./logger/" + args.name, filemode="a+",
+    logging.basicConfig(level=logging.DEBUG, filename="./logger/" + args.name + ".log", filemode="a+",
                         format="%(asctime)-15s %(levelname)-8s %(message)s")
 
     # main training loop
@@ -194,7 +194,7 @@ def train_loop():
             freeze_resnet = False
 
         print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
-        
+
         # rl update loop on VIST dataset
         batch_raw = batch['images']
         batch_size = batch_raw.shape[0]
