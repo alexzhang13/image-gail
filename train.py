@@ -32,7 +32,8 @@ args = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
-print(device)
+print("Test name: ", args.name)
+print("Device:", device)
 
 # init random seeding
 np.random.seed(args.seed)
@@ -63,10 +64,23 @@ def normal(action, action_prob, sigma):
     prob = torch.sum(log_probs, axis=1)
     return prob
 
-def validation(epoch_id, dl, val):
+def validation(epoch_id, vist_dataset_images, val):
     if val:
         save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
         agent.save(save_path, epoch_id)
+        vist_dataset_images.split = "val"
+    else:
+        vist_dataset_images.split = "test"
+
+    dl = DataLoader(
+        vist_dataset_images,
+        batch_size=2 * args.batch_size,
+        shuffle=True,
+        num_workers=8,
+        drop_last=False,
+        pin_memory=False,
+        collate_fn=prune_illegal_collate,
+    )
 
     with torch.no_grad():
         accuracy = 0
@@ -123,48 +137,10 @@ def train_loop():
     # initialize env and expert trajectories
     freeze_resnet = True
     curr_epoch_id = 0
-    vist_dataset_images_train = VISTDatasetImages(params)
-    vist_dataset_images_valid = VISTDatasetImages(params)
-    vist_dataset_images_test = VISTDatasetImages(params)
-    vist_dataset_images_train.split = "train"
-    vist_dataset_images_valid.split = "val"
-    vist_dataset_images_test.split = "test"
+    vist_dataset_images = VISTDatasetImages(params)
+    vist_dataset_images.split = "train"
 
     print("time:%s \t Dataset Images Done Initializing"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
-
-    dataloader = DataLoader(
-        vist_dataset_images_train,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=8,
-        drop_last=True,
-        pin_memory=False,
-        collate_fn=prune_illegal_collate,
-    )
-
-    print("time:%s \t Train DataLoader Done Initializing"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
-
-    val_dataloader = DataLoader(
-        vist_dataset_images_valid,
-        batch_size=2 * args.batch_size,
-        shuffle=True,
-        num_workers=8,
-        drop_last=False,
-        pin_memory=False,
-        collate_fn=prune_illegal_collate,
-    )
-    print("time:%s \t Val DataLoader Done Initializing"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
-
-    test_dataloader = DataLoader(
-        vist_dataset_images_test,
-        batch_size=2 * args.batch_size,
-        shuffle=True,
-        num_workers=8,
-        drop_last=False,
-        pin_memory=False,
-        collate_fn=prune_illegal_collate,
-    )
-    print("time:%s \t Test DataLoader Done Initializing"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
 
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=lr, seq_length=seq_length, device=device)
@@ -173,56 +149,64 @@ def train_loop():
     if not os.path.exists("./saved_models/" + args.name + "/"):
         os.makedirs("./saved_models/" + args.name + "/")
 
-    if not os.path.exists("./logger/" + args.name):
-        os.makedirs("./logger/" + args.name)
+    if not os.path.exists("./logger/"):
+        os.makedirs("./logger/")
 
     logging.basicConfig(level=logging.DEBUG, filename="./logger/" + args.name + ".log", filemode="a+",
                         format="%(asctime)-15s %(levelname)-8s %(message)s")
 
     # main training loop
-    for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
-        # save model and validation score
-        if curr_epoch_id < epoch_id:
-            print("Epoch finished. Running Validation...")
-            curr_epoch_id = epoch_id
-            validation(epoch_id, val_dataloader, True) # val set
-            validation(epoch_id, test_dataloader, False) # test set 
-            agent.on_epoch_end()
+    for epoch_id in range(args.epochs):
+        dataset.split = "train"
+        dataloader = DataLoader(
+            vist_dataset_images,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=8,
+            drop_last=True,
+            pin_memory=False,
+            collate_fn=prune_illegal_collate,
+        )
+        for _, iter_id, batch in batch_iter(dataloader, 1):
+            # save model and validation score
+            print("Epoch #{}, Batch #{}".format(epoch_id, iter_id))
+
+            # rl update loop on VIST dataset
+            batch_raw = batch['images']
+            batch_size = batch_raw.shape[0]
+
+            batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
+            batch_raw = torch.FloatTensor(batch_raw).to(device)
+
+            # sample trajectories
+            exp_traj = agent.resnet(batch_raw)
+            exp_traj = torch.reshape(exp_traj, (batch_size, seq_length, -1))
+
+            state = exp_traj[:, 0] # get batch of first images of sequence
+            sampled_traj = torch.unsqueeze(state, 1)
+            log_probs = []
+            for i in range(seq_length-1):
+                action = agent.policy(state)
+                action_prob = torch.normal(action, args.variance)
+                log_prob = normal(action, action_prob, args.variance)
+                log_probs.append(log_prob) # L x B x 1
+                sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
+                
+            discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs)
+            print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
+            print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
+
+        print("Epoch finished. Running Validation...")
+        validation(epoch_id, vist_dataset_images, True) # val set
+        validation(epoch_id, vist_dataset_images, False) # test set 
+        agent.on_epoch_end()
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
             agent.unfreeze_resnet()
             freeze_resnet = False
 
-        print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
-
-        # rl update loop on VIST dataset
-        batch_raw = batch['images']
-        batch_size = batch_raw.shape[0]
-
-        batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
-        batch_raw = torch.FloatTensor(batch_raw).to(device)
-
-        # sample trajectories
-        exp_traj = agent.resnet(batch_raw)
-        exp_traj = torch.reshape(exp_traj, (batch_size, seq_length, -1))
-
-        state = exp_traj[:, 0] # get batch of first images of sequence
-        sampled_traj = torch.unsqueeze(state, 1)
-        log_probs = []
-        for i in range(seq_length-1):
-            action = agent.policy(state)
-            action_prob = torch.normal(action, args.variance)
-            log_prob = normal(action, action_prob, args.variance)
-            log_probs.append(log_prob) # L x B x 1
-            sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
-            
-        discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs)
-        print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
-        print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
-
-
-    save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
-    agent.save(save_path, curr_epoch_id+1)
+    save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(args.epochs) + ".t7"
+    agent.save(save_path, args.epochs)
     print("Done.")
 
 
