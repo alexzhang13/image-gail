@@ -169,6 +169,7 @@ def train_loop():
         )
         for _, iter_id, batch in batch_iter(dataloader, 1):
             # save model and validation score
+            print("time:%s"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")), end="\t")
             print("Epoch #{}, Batch #{}".format(epoch_id, iter_id))
 
             # rl update loop on VIST dataset
