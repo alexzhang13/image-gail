@@ -10,9 +10,9 @@ from types import SimpleNamespace
 from joblib import Parallel, delayed
 from torchvision import transforms
 from PIL import Image
-
+import numpy as np
 from datetime import datetime
-
+import torch
 def iter_filename(root_dir):
     all_paths = glob.glob(os.path.join(root_dir, "*.png")) + glob.glob(os.path.join(root_dir, "*.jpg"))
     for p in all_paths:
@@ -34,6 +34,9 @@ def convert_single_file(filepath):
     try:
         loaded_image = transform(Image.open(filepath).convert("RGB"))
         byte_encimg = loaded_image.numpy().tobytes()
+        # decoded = np.frombuffer(byte_encimg, dtype="float32").reshape(3, 512, 512)
+        # assert np.allclose(decoded, loaded_image.numpy())
+        # assert torch.allclose(loaded_image, torch.from_numpy(decoded))
         byte_filename = filename.encode()
         success = True
         explain = ''

@@ -3,13 +3,14 @@ import json
 import os
 import random
 import time
-
+import imagesize
 import numpy as np
 import torch
 import torch.utils
 from PIL import Image
 from torchvision import models, transforms
 import glob
+import lmdb
 
 class VISTDatasetImages(torch.utils.data.Dataset):
     def __init__(self, params):
@@ -17,10 +18,10 @@ class VISTDatasetImages(torch.utils.data.Dataset):
         self.num_data_points_per_split = {}
         # load caption information for different splits
         self.subsets = ["train", "val", "test"]
-        self.overfit = params["OVERFIT"]
         self.params = params
         self._split = "train"
         self._split_idx = 0
+        self.envs = []
 
         distractor_paths = [
             params["DISTRACTOR_PATH_TRAIN"],
@@ -28,17 +29,12 @@ class VISTDatasetImages(torch.utils.data.Dataset):
             params["DISTRACTOR_PATH_TEST"],
         ]
         self.distractors = self.process_distractors(distractor_paths)
-        self.all_image_paths = []
-        self.all_data = []
         for subset_id, subset in enumerate(self.subsets):
             self.num_data_points_per_split[subset] = len(self.distractors[subset_id])
-            if params["OVERFIT"]:
-                self.num_data_points_per_split[subset] = params[
-                    "DATASET_SAMPLE_OVERFIT"
-                ]
-            img_root = os.path.join(self.params["IMG_ROOT"], subset)
-            self.all_image_paths.append(set([os.path.basename(p) for p in glob.glob(os.path.join(img_root, "*"))]))
-
+            # initialize lmdb
+            path_to_lmdb = os.path.join(params["IMG_LMDB_ROOT"], subset)
+            self.envs.append(lmdb.open(path_to_lmdb, readonly=True, lock=False, map_size=int(1e12)))
+            
 
     def process_distractors(self, paths):
         all_distractors = []
@@ -79,72 +75,47 @@ class VISTDatasetImages(torch.utils.data.Dataset):
         item = {}
 
         cur_distractors = self.distractors[self._split_idx]
+
         cur_sample = cur_distractors[index]
         cur_images = cur_sample["photo_sequence"]
         distractor_ids = cur_sample["distractors"]
+        env = self.envs[self._split_idx]
 
-        img_root = os.path.join(self.params["IMG_ROOT"], self._split)
-        all_images = self.all_image_paths[self._split_idx]
-        image_paths_jpg = [
-            os.path.join(img_root, "%s.jpg" % img_id)
-            for img_id in cur_images
-        ]
-        image_paths_png = [
-            os.path.join(img_root, "%s.png" % img_id)
-            for img_id in cur_images
-        ]
-        exists_path_jpg = [os.path.basename(p) in all_images for p in image_paths_jpg]
-        exists_path_png = [os.path.basename(p) in all_images for p in image_paths_png]
-        
-
-        # check if paths exists
-        if not all([exists_jpg or exists_png for exists_jpg, exists_png in zip(exists_path_jpg, exists_path_png)]):
-            print("image not found")
-            return
-        transform = self.get_default_transform()
-        # load images
-        gt_images = []
         distractor_images = []
-        for j in range(len(image_paths_jpg)):
-            if exists_path_jpg[j]:
-                p = image_paths_jpg[j]
-            else:
-                p = image_paths_png[j]
-            try:
-                loaded_image = transform(Image.open(p).convert("RGB"))
-                gt_images.append(loaded_image)
-            except:
-                print("image corrupt")
-                return
-        gt_images = torch.stack(gt_images)
+        gt_images = []
 
-        distractor_image_paths_jpg = [
-            os.path.join(img_root, "%s.jpg" % img_id)
-            for img_id in distractor_ids
-        ]
-        distractor_image_paths_png = [
-            os.path.join(img_root, "%s.png" % img_id)
-            for img_id in distractor_ids
-        ]
-        distractor_exists_path_jpg = [os.path.basename(p) in all_images for p in distractor_image_paths_jpg]
-        distractor_exists_path_png = [os.path.basename(p) in all_images for p in distractor_image_paths_png]
+        with env.begin() as e:
 
-        if not all([exists_jpg or exists_png for exists_jpg, exists_png in zip(distractor_exists_path_jpg, distractor_exists_path_png)]):
-            print("image not found")
-            return
+            for distractor in distractor_ids:
+                    img_binary = e.get(distractor.encode())
+                    if img_binary is None:
+                        print("image not found in database", distractor)
+                        return
+                    try:
+                        img = np.frombuffer(img_binary, dtype="float32").reshape(3, 256, 256)
+                        img = torch.from_numpy(img)
+                        distractor_images.append(img)
+                    except:
+                        print("corrupted image", distractor)
+                        return
 
-        for j in range(len(distractor_ids)):
-            if distractor_exists_path_jpg[j]:
-                p = distractor_image_paths_jpg[j]
-            else:
-                p = distractor_image_paths_png[j]
-            try:
-                loaded_image = transform(Image.open(p).convert("RGB"))
-                distractor_images.append(loaded_image)
-            except:
-                print("image corrupt")
-                return
-        distractor_images = torch.stack(distractor_images)
+            distractor_images = torch.stack(distractor_images)
+
+            for cur_image in cur_images:
+                with env.begin() as e:
+                    img_binary = e.get(cur_image.encode())
+                    if img_binary is None:
+                        print("image not found in database", cur_image)
+                        return
+                    try:
+                        img = np.frombuffer(img_binary, dtype="float32").reshape(3, 256, 256)
+                        img = torch.from_numpy(img)
+                        gt_images.append(img)
+                    except:
+                        print("corrupted image", cur_image)
+                        return
+
+            gt_images = torch.stack(gt_images)            
 
         item["images"] = gt_images
         item["distractor_images"] = distractor_images
