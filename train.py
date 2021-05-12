@@ -44,6 +44,7 @@ params = {
         "DISTRACTOR_PATH_TRAIN": "configs/vist_distractor_ids/seed-123/train_hard_sampled_distractors.json",
         "DISTRACTOR_PATH_VAL": "configs/vist_distractor_ids/seed-123/val_hard_sampled_distractors.json",
         "IMG_ROOT": "/n/fs/nlp-murahari/datasets/VIST/images",
+        "IMG_LMDB_ROOT": "/n/fs/nlp-murahari/datasets/VIST/images/image-feats",
         "NUM_DISTRACTORS": 4,
         "OVERFIT": False,
     }
