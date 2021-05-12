@@ -100,14 +100,14 @@ class Gail (nn.Module):
             param.requires_grad = True
         
         self.optim_policy = torch.optim.Adam(self.policy.parameters(), lr=lr)
-        self.scheduler_policy = MultiStepLR(optim_policy, milestones=[20,40,60,80,100], gamma=0.1)
+        self.scheduler_policy = MultiStepLR(self.optim_policy, milestones=[20,40,60,80,100], gamma=0.1)
 
         self.discriminator = Discriminator(input_dim, device)
         for param in self.discriminator.parameters():
             param.requires_grad = True
 
         self.optim_discriminator = torch.optim.Adam(self.discriminator.parameters(), lr=lr)
-        self.scheduler_discriminator = MultiStepLR(optim_discriminator, milestones=[20,40,60,80,100], gamma=0.1)
+        self.scheduler_discriminator = MultiStepLR(self.optim_discriminator, milestones=[20,40,60,80,100], gamma=0.1)
 
         # deep representation 
         resnet = torchvision.models.resnet101(pretrained=True).to(device)
@@ -116,7 +116,7 @@ class Gail (nn.Module):
             param.requires_grad = False
         
         self.optim_resnet = torch.optim.Adam(self.resnet.parameters(), lr=lr)
-        self.scheduler_resnet = MultiStepLR(optim_resnet, milestones=[20,40,60,80,100], gamma=0.1)
+        self.scheduler_resnet = MultiStepLR(self.optim_resnet, milestones=[20,40,60,80,100], gamma=0.1)
   
         self.loss = nn.BCELoss().to(device)
         self.l1loss = nn.L1Loss().to(device)
