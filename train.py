@@ -11,6 +11,7 @@ from models.gail import Discriminator, Policy, Gail
 
 from dataloader.vist_images_dataloader import VISTDatasetImages
 from utils.helper_utils import prune_illegal_collate, batch_iter
+from datetime import datetime
 
 torch.cuda.empty_cache()
 
@@ -89,6 +90,7 @@ def train_loop():
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
    
+    print("time:%s \t Training Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
     # main training loop
     for epoch_id, iter_id, batch in batch_iter(dataloader, args.epochs):
         # save model and validation score
@@ -176,6 +178,7 @@ def train_loop():
             
         discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs)
         print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
+        print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
 
 
     save_path = "./saved_models/checkpoint" + "_epoch_" + str(curr_epoch_id+1) + ".t7"
