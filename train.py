@@ -51,7 +51,7 @@ params = {
 
 def normal(action, action_prob, sigma):
     exponent = -0.5 * torch.pow((action - action_prob)/sigma, 2)
-    f = 1/(sigma * math.sqrt(2 * math.pi)) * torch.exp(exponent)
+    f = 1/(math.sqrt(2 * sigma * math.pi)) * torch.exp(exponent)
     log_probs = torch.log(f)
     prob = torch.sum(log_probs, axis=1)
     return prob
@@ -69,7 +69,7 @@ def train_loop():
         vist_dataset_images_train,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=8,
         drop_last=True,
         pin_memory=False,
         collate_fn=prune_illegal_collate,
@@ -79,7 +79,7 @@ def train_loop():
         vist_dataset_images_valid,
         batch_size=2 * args.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=8,
         drop_last=False,
         pin_memory=False,
         collate_fn=prune_illegal_collate,
@@ -127,7 +127,7 @@ def train_loop():
                     refs = references[i+1]
                         
                     action = agent.policy(imgs)
-                    preds = torch.normal(action, 0.1)
+                    preds = torch.normal(action, 0.01)
 
                     # reshape for concatenation
                     preds = torch.unsqueeze(preds, dim=1)
@@ -168,8 +168,8 @@ def train_loop():
         log_probs = []
         for i in range(seq_length-1):
             action = agent.policy(state)
-            action_prob = torch.normal(action, 0.1)
-            log_prob = normal(action, action_prob, 0.1)
+            action_prob = torch.normal(action, 0.01)
+            log_prob = normal(action, action_prob, 0.01)
             log_probs.append(log_prob) # L x B x 1
             sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
             
