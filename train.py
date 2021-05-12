@@ -127,7 +127,7 @@ def train_loop():
                     refs = references[i+1]
                         
                     action = agent.policy(imgs)
-                    preds = torch.normal(action, 1)
+                    preds = torch.normal(action, 0.1)
 
                     # reshape for concatenation
                     preds = torch.unsqueeze(preds, dim=1)
@@ -168,8 +168,8 @@ def train_loop():
         log_probs = []
         for i in range(seq_length-1):
             action = agent.policy(state)
-            action_prob = torch.normal(action, 1)
-            log_prob = normal(action, action_prob, 1)
+            action_prob = torch.normal(action, 0.1)
+            log_prob = normal(action, action_prob, 0.1)
             log_probs.append(log_prob) # L x B x 1
             sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
             
