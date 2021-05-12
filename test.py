@@ -113,7 +113,7 @@ def test_loop():
             accuracy += correct / (batch_size)
             __iter_id = _iter_id
 
-    print("[Accuracy: %f]\n" % (epoch_id, accuracy/(iter_id+1)))
+    print("[Accuracy: %f]\n" % (accuracy/(__iter_id+1)))
 
 if __name__ == "__main__":
     test_loop()
