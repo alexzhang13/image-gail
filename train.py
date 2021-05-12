@@ -193,11 +193,12 @@ def train_loop():
             agent.unfreeze_resnet()
             freeze_resnet = False
 
+        print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
+        
         # rl update loop on VIST dataset
         batch_raw = batch['images']
         batch_size = batch_raw.shape[0]
 
-        print("Epoch #{}, Batch #{}".format(epoch_id+1, iter_id+1))
         batch_raw = np.reshape(batch_raw, (batch_size * seq_length, batch_raw.shape[2], batch_raw.shape[3], batch_raw.shape[4]))
         batch_raw = torch.FloatTensor(batch_raw).to(device)
 
