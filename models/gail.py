@@ -140,7 +140,7 @@ class Gail (nn.Module):
     # ? for policy updates: detach on policy prob, the reward from the discriminator is just a scalar value, don't want gradients to leak from there.
     # ? reinforce update : (Q in the supplementary: Q_t = mean(D(v_t, v_t+1) + D(v_t+1, v_t+2) + ..)).detach()
     # ? reinforce (state, rewards) --> rewards = Q.detach()
-    def update(self, batch_size, sampled_states, exp_traj, log_probs):
+    def update(self, batch_size, sampled_states, exp_traj, log_probs, update_discrim):
         exp_state = exp_traj[:,0:self.seq_length-1]
         exp_action = exp_traj[:,1:self.seq_length]
         reshaped_exp_traj = torch.cat((exp_state, exp_action), axis=2)
@@ -163,11 +163,14 @@ class Gail (nn.Module):
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
         # compute discrim loss
-        discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
+        if update_discrim:
+            discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
 
-        discrim_loss_mean = discrim_loss.mean()
-        discrim_loss_mean.backward()
-        self.optim_discriminator.step()
+            discrim_loss_mean = discrim_loss.mean()
+            discrim_loss_mean.backward()
+            self.optim_discriminator.step()
+        else:
+            discrim_loss_mean = None
 
         # update policy: get loss from discrim using REINFORCE
         self.optim_policy.zero_grad()
