@@ -25,6 +25,7 @@ parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--variance', type=float, default=0.01)
 parser.add_argument('--freeze_epochs', type=int, default=5)
+parser.add_argument('--gen_per_discrim', type=int, default=1)
 parser.add_argument('--name', default="")
 
 args = parser.parse_args()
@@ -64,7 +65,7 @@ def normal(action, action_prob, sigma):
     prob = torch.sum(log_probs, axis=1)
     return prob
 
-def validation(epoch_id, vist_dataset_images, val):
+def validation(agent, epoch_id, vist_dataset_images, val):
     if val:
         save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
         agent.save(save_path, epoch_id)
@@ -193,13 +194,18 @@ def train_loop():
                 log_probs.append(log_prob) # L x B x 1
                 sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
                 
-            discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs)
-            print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
+            if iter_id % args.gen_per_discrim == 0:
+                discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs, True)
+                print("[Discrim Mean Loss: %f]\t [Gen Mean Loss: %f]\n" % (discrim_loss, gen_loss))
+            else:
+                _, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs, False)
+                print("[Gen Mean Loss: %f]\n" % (gen_loss))
+            
             print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
 
         print("Epoch finished. Running Validation...")
-        validation(epoch_id, vist_dataset_images, True) # val set
-        validation(epoch_id, vist_dataset_images, False) # test set 
+        validation(agent, epoch_id, vist_dataset_images, True) # val set
+        validation(agent, epoch_id, vist_dataset_images, False) # test set 
         agent.on_epoch_end()
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
