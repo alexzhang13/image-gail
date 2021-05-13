@@ -45,6 +45,8 @@ torch.set_printoptions(precision=10, edgeitems=1)
 seq_length = 5
 num_distractors = 4
 lr = args.lr
+best_val = 0.0
+
 params = {
         "BATCH_PER_GPU": 16,
         "DATASET_SAMPLE_OVERFIT": 100,
@@ -67,8 +69,6 @@ def normal(action, action_prob, sigma):
 
 def validation(agent, epoch_id, vist_dataset_images, val):
     if val:
-        save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
-        agent.save(save_path, epoch_id)
         vist_dataset_images.split = "val"
     else:
         vist_dataset_images.split = "test"
@@ -85,6 +85,7 @@ def validation(agent, epoch_id, vist_dataset_images, val):
 
     with torch.no_grad():
         accuracy = 0
+        r3_accuracy = 0
         __iter_id = 0
         for _, _iter_id, _batch in batch_iter(dl, 1):
             batch_raw = _batch['images']
@@ -107,6 +108,7 @@ def validation(agent, epoch_id, vist_dataset_images, val):
 
             # compare candidates and reference images
             correct = 0
+            r3_correct = 0
             # for i in range(seq_length-1):
             i = 3
             imgs = references[i]
@@ -124,15 +126,24 @@ def validation(agent, epoch_id, vist_dataset_images, val):
             feat_diff = torch.norm(preds - candidates, p=2, dim=2)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
+            r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
+
             zeros = min_indices == 0
+            r3 = r3_indices <= 3
             correct += zeros.nonzero().shape[0]
+            r3_correct += r3.nonzero().shape[0]
             
             accuracy += correct / (batch_size)
+            r3_accuracy += r3_correct / (batch_size)
             __iter_id = _iter_id
     if val:
-        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1)))
+        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
+        if accuracy/(__iter_id+1) > best_val:
+            save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
+            agent.save(save_path, epoch_id)
+            best_val = accuracy/(__iter_id+1)
     else:
-        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1)))
+        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
 
 def train_loop():
     # initialize env and expert trajectories
