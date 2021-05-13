@@ -158,7 +158,7 @@ def train_loop():
 
     # main training loop
     for epoch_id in range(args.epochs):
-        dataset.split = "train"
+        vist_dataset_images.split = "train"
         dataloader = DataLoader(
             vist_dataset_images,
             batch_size=args.batch_size,
