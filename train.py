@@ -45,7 +45,6 @@ torch.set_printoptions(precision=10, edgeitems=1)
 seq_length = 5
 num_distractors = 4
 lr = args.lr
-best_val = 0.0
 
 params = {
         "BATCH_PER_GPU": 16,
@@ -67,7 +66,7 @@ def normal(action, action_prob, sigma):
     prob = torch.sum(log_probs, axis=1)
     return prob
 
-def validation(agent, epoch_id, vist_dataset_images, val):
+def validation(agent, epoch_id, vist_dataset_images, val, best_val):
     if val:
         vist_dataset_images.split = "val"
     else:
@@ -144,11 +143,13 @@ def validation(agent, epoch_id, vist_dataset_images, val):
             best_val = accuracy/(__iter_id+1)
     else:
         logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
+    
+    return best_val
 
 def train_loop():
     # initialize env and expert trajectories
     freeze_resnet = True
-    curr_epoch_id = 0
+    best_val = 0.0
     vist_dataset_images = VISTDatasetImages(params)
     vist_dataset_images.split = "train"
 
@@ -215,8 +216,8 @@ def train_loop():
             print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
 
         print("Epoch finished. Running Validation...")
-        validation(agent, epoch_id, vist_dataset_images, True) # val set
-        validation(agent, epoch_id, vist_dataset_images, False) # test set 
+        best_val = validation(agent, epoch_id, vist_dataset_images, True, best_val) # val set
+        validation(agent, epoch_id, vist_dataset_images, False, best_val) # test set 
         agent.on_epoch_end()
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
