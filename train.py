@@ -8,6 +8,7 @@ import pdb
 import os
 from torch.utils.data import DataLoader
 import logging
+import json
 
 from models.gail import Discriminator, Policy, Gail
 
@@ -124,6 +125,19 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             preds = torch.repeat_interleave(preds, num_distractors+1, dim=1)
             feat_diff = torch.norm(preds - candidates, p=2, dim=2)
 
+            # dump into json
+            _batch["image_ids"], _batch["distractor_image_ids"]
+            data = {}
+            data['epoch'] = epoch_id
+            data['iter_id'] = _iter_id
+            data['context_image_ids'] = _batch["image_ids"]
+            data['candidates'] = _batch["distractor_image_ids"]
+            data['scores'] = feat_diff
+
+            path = '/logger/' + args.name + '.json'
+            with open(path, 'w') as outfile:
+                json.dump(data, outfile)
+
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
 
@@ -157,6 +171,9 @@ def train_loop():
 
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=lr, seq_length=seq_length, device=device)
+    print("Using ", torch.cuda.device_count(), "GPUs")
+    agent = nn.DataParallel(agent)
+    agent.to(device)
    
     print("time:%s \t Training Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
     if not os.path.exists("./saved_models/" + args.name + "/"):
