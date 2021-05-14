@@ -94,7 +94,11 @@ class Gail (nn.Module):
         self.seq_length = seq_length
         self.device = device
         self.discount = 0.99
+
+        # set up policy
         self.policy = Policy(2048, device)
+        self.policy = nn.DataParallel(self.policy)
+        self.policy.to(device)
 
         for param in self.policy.parameters():
             param.requires_grad = True
@@ -102,7 +106,11 @@ class Gail (nn.Module):
         self.optim_policy = torch.optim.Adam(self.policy.parameters(), lr=lr)
         self.scheduler_policy = MultiStepLR(self.optim_policy, milestones=[20,40,60,80,100], gamma=0.1)
 
+        # set up discriminator
         self.discriminator = Discriminator(input_dim, device)
+        self.discriminator = nn.DataParallel(self.discriminator)
+        self.discriminator.to(device)
+
         for param in self.discriminator.parameters():
             param.requires_grad = True
 
@@ -112,6 +120,9 @@ class Gail (nn.Module):
         # deep representation 
         resnet = torchvision.models.resnet101(pretrained=True).to(device)
         self.resnet = nn.Sequential(*list(resnet.children())[:-1]) 
+        self.resnet = nn.DataParallel(self.resnet)
+        self.resnet.to(device)
+
         for param in self.resnet.parameters():
             param.requires_grad = False
         
