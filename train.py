@@ -126,11 +126,11 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             feat_diff = torch.norm(preds - candidates, p=2, dim=2)
 
             # dump into json
-            _batch["image_ids"], _batch["distractor_image_ids"]
+            # _batch["image_id"], _batch["distractor_image_ids"]
             data = {}
             data['epoch'] = epoch_id
             data['iter_id'] = _iter_id
-            data['context_image_ids'] = _batch["image_ids"]
+            data['context_image_ids'] = _batch["image_id"]
             data['candidates'] = _batch["distractor_image_ids"]
             data['scores'] = feat_diff
 
