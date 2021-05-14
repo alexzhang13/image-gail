@@ -132,7 +132,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             data['iter_id'] = _iter_id
             data['context_image_ids'] = _batch["image_id"].tolist()
             data['candidates'] = _batch["distractor_image_ids"].tolist()
-            data['scores'] = feat_diff.numpy().tolist()
+            data['scores'] = feat_diff.cpu().numpy().tolist()
 
             path = './logger/' + args.name + '.json'
             with open(path, 'w') as outfile:
@@ -142,7 +142,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
 
             zeros = min_indices == 0
-            r3 = r3_indices <= 3
+            r3 = r3_indices < 3
             correct += zeros.nonzero().shape[0]
             r3_correct += r3.nonzero().shape[0]
             
