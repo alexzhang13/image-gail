@@ -134,7 +134,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             data['candidates'] = _batch["distractor_image_ids"]
             data['scores'] = feat_diff
 
-            path = '/logger/' + args.name + '.json'
+            path = './logger/' + args.name + '.json'
             with open(path, 'w') as outfile:
                 json.dump(data, outfile)
 
