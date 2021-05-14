@@ -130,9 +130,9 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             data = {}
             data['epoch'] = epoch_id
             data['iter_id'] = _iter_id
-            data['context_image_ids'] = _batch["image_id"]
-            data['candidates'] = _batch["distractor_image_ids"]
-            data['scores'] = feat_diff
+            data['context_image_ids'] = _batch["image_id"].tolist()
+            data['candidates'] = _batch["distractor_image_ids"].tolist()
+            data['scores'] = feat_diff.numpy().tolist()
 
             path = './logger/' + args.name + '.json'
             with open(path, 'w') as outfile:
