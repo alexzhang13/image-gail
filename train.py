@@ -172,8 +172,6 @@ def train_loop():
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=lr, seq_length=seq_length, device=device)
     print("Using ", torch.cuda.device_count(), "GPUs")
-    agent = nn.DataParallel(agent)
-    agent.to(device)
    
     print("time:%s \t Training Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
     if not os.path.exists("./saved_models/" + args.name + "/"):
