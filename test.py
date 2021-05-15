@@ -96,7 +96,7 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
         pin_memory=False,
         collate_fn=prune_illegal_collate,
     )
-
+    full_data = []
     with torch.no_grad():
         accuracy = 0
         r3_accuracy = 0
@@ -147,10 +147,7 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
             data['context_image_ids'] = _batch["image_id"].tolist()
             data['candidates'] = _batch["distractor_image_ids"].tolist()
             data['scores'] = feat_diff.cpu().numpy().tolist()
-
-            path = './logger/test_' + args.name + '.json'
-            with open(path, 'a') as outfile:
-                json.dump(data, outfile)
+            full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
@@ -165,9 +162,14 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
             __iter_id = _iter_id
     if val:
         logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
+        path = './logger/val_' + args.name + '.json'
+        with open(path, 'w') as outfile:
+            json.dump(data, outfile)
     else:
         logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
-
+        path = './logger/test_' + args.name + '.json'
+        with open(path, 'w') as outfile:
+            json.dump(data, outfile)
 
 if __name__ == "__main__":
     test_loop()
