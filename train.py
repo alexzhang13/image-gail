@@ -83,6 +83,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
         collate_fn=prune_illegal_collate,
     )
 
+    agent.eval_mode()
     with torch.no_grad():
         correct = 0
         r3_correct = 0
@@ -180,6 +181,7 @@ def train_loop():
 
     # main training loop
     for epoch_id in range(args.epochs):
+        agent.train_mode()
         vist_dataset_images.split = "train"
         dataloader = DataLoader(
             vist_dataset_images,
@@ -227,6 +229,7 @@ def train_loop():
 
         print("Epoch finished. Running Validation...")
         best_val = validation(agent, epoch_id, vist_dataset_images, True, best_val) # val set
+
         validation(agent, epoch_id, vist_dataset_images, False, best_val) # test set 
         agent.on_epoch_end()
 

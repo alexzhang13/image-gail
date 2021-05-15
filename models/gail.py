@@ -207,6 +207,16 @@ class Gail (nn.Module):
         for param in self.resnet.parameters():
             param.requires_grad = True
 
+    def eval_mode(self):
+        self.policy.eval()
+        self.discriminator.eval()
+        self.resnet.eval()
+
+    def train_mode(self):
+        self.policy.train()
+        self.discriminator.train()
+        self.resnet.train()
+
     def save(self, save_path, epoch):
         torch.save({
             'policy_state_dict': self.policy.state_dict(),
