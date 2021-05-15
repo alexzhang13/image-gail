@@ -23,17 +23,14 @@ total = 0
 for i in range(len(data)):
     feat_diff = np.array(data[i]['scores'])
     min_indices = np.argmin(feat_diff, axis=1).flatten()
-    r3_indices = np.argsort(feat_diff, axis=1)[:,0].flatten()
+    r3_indices = np.argsort(feat_diff, dim=1)
+    zero_pos = np.argmin(r3_indices, dim=1).flatten()
     shape = (min_indices.shape[0])
-    p1 = r3_indices[0].flatten()
-    p2 = r3_indices[0].flatten()
-    p3 = r3_indices[0].flatten()
 
     zeros = min_indices == 0
-    r3 = p1 + p2 + p3
 
     correct = zeros.nonzero()[0].shape[0]
-    r3_correct = r3.nonzero()[0].shape[0]
+    r3_correct = zero_pos.nonzero()[0].shape[0]
     
     accuracy += correct
     r3_accuracy += r3_correct
