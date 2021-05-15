@@ -21,9 +21,9 @@ r3_accuracy = 0.0
 
 for i in range(len(data)):
     feat_diff = np.array(data[i]['scores'])
-    min_indices = np.argmin(feat_diff, axis=1).flatten()
-    r3_indices = np.argsort(feat_diff, axis=1)
-    zero_pos = np.argmin(r3_indices, axis=1).flatten()
+    min_indices = np.argmin(feat_diff, axis=0).flatten()
+    r3_indices = np.argsort(feat_diff, axis=0)
+    zero_pos = np.argmin(r3_indices, axis=0).flatten()
     shape = (min_indices.shape[0])
 
     zeros = min_indices == 0
