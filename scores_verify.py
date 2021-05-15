@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Arguments for training")
-parser.add_argument('--path', default="./logger/test_schedule_5_1.json")
+parser.add_argument('--path', default="./logger/val_schedule_5_1.json")
 args = parser.parse_args()
 
 # Opening JSON file
@@ -31,10 +31,11 @@ for i in range(len(data)):
     correct = zeros.nonzero()[0].shape[0]
     r3_correct = r3.nonzero()[0].shape[0]
     
-    accuracy += correct/shape
-    r3_accuracy += r3_correct/shape
+    accuracy += correct
+    r3_accuracy += r3_correct
+    total += shape
 
-print("[Val] [Epoch #: 1]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(len(data)),r3_accuracy/(len(data))))
+print("[Val] [Epoch #: X]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(total),r3_accuracy/(total)))
    
 # Closing file
 f.close()
