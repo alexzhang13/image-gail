@@ -28,9 +28,10 @@ for i in range(len(data)):
     shape = (min_indices.shape[0])
 
     zeros = min_indices == 0
+    r3 = zero_pos < 3
 
     correct = zeros.nonzero()[0].shape[0]
-    r3_correct = zero_pos.nonzero()[0].shape[0]
+    r3_correct = r3.nonzero()[0].shape[0]
     
     accuracy += correct
     r3_accuracy += r3_correct
