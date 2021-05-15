@@ -164,12 +164,12 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
         logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
         path = './logger/val_' + args.name + '.json'
         with open(path, 'w') as outfile:
-            json.dump(data, outfile)
+            json.dump(full_data, outfile)
     else:
         logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
         path = './logger/test_' + args.name + '.json'
         with open(path, 'w') as outfile:
-            json.dump(data, outfile)
+            json.dump(full_data, outfile)
 
 if __name__ == "__main__":
     test_loop()
