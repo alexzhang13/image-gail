@@ -135,7 +135,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             data['scores'] = feat_diff.cpu().numpy().tolist()
 
             path = './logger/' + args.name + '.json'
-            with open(path, 'w') as outfile:
+            with open(path, 'a') as outfile:
                 json.dump(data, outfile)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
