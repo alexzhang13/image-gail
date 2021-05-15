@@ -34,7 +34,7 @@ args = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
-print("Test name: ", args.name)
+print("Train name: ", args.name)
 print("Device:", device)
 
 # init random seeding

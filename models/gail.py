@@ -161,22 +161,19 @@ class Gail (nn.Module):
         action = sampled_states[:,1:self.seq_length]
         reshaped_samp_traj = torch.cat((state, action), axis=2)
         reshaped_samp_traj = torch.reshape(reshaped_samp_traj, (batch_size*(self.seq_length-1), -1))
-        # reshaped_state_inp = torch.reshape(state, (batch_size*(self.seq_length-1),-1))
-
-        # update discriminator: discrim loss
-        self.optim_discriminator.zero_grad()
         
         # label tensors and get policies
-        exp_label = torch.ones((batch_size*(self.seq_length-1),1), device=self.device)
         policy_label = torch.zeros((batch_size*(self.seq_length-1),1), device=self.device)
-
-        exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
         policy_prob = self.discriminator(reshaped_samp_traj.detach()) # detach phi output from discrim update
 
         # compute discrim loss
         if update_discrim:
-            discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
+            exp_label = torch.ones((batch_size*(self.seq_length-1),1), device=self.device)
+            exp_prob = self.discriminator(reshaped_exp_traj.detach()) 
 
+            self.optim_discriminator.zero_grad()
+            
+            discrim_loss = self.loss(exp_prob, exp_label) + self.loss(policy_prob, policy_label)
             discrim_loss_mean = discrim_loss.mean()
             discrim_loss_mean.backward()
             self.optim_discriminator.step()
