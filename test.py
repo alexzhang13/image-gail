@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser(description="Arguments for training")
 parser.add_argument('--seed', type=int, default=7)
 parser.add_argument('--epochs', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--variance', type=float, default=0.01)
 parser.add_argument('--lr', type=float, default=1e-4)
 parser.add_argument('--name', default="")
 parser.add_argument('--path', default="./saved_models/checkpoint_epoch_20.t7")
@@ -30,7 +31,7 @@ parser.add_argument('--path', default="./saved_models/checkpoint_epoch_20.t7")
 args = parser.parse_args()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("Train name: ", args.name)
+print("Test name: ", args.name)
 print("Device:", device)
 
 # init random seeding
@@ -69,7 +70,8 @@ def test_loop():
     print("Using ", torch.cuda.device_count(), "GPUs")
 
     # Evaluation
-    print("time:%s \t Training Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
+    print("time:%s \t Testing Loop Begins"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S")))
+    evaluation(agent, 0, vist_dataset_images, True)
     evaluation(agent, 0, vist_dataset_images, False)
 
 def normal(action, action_prob, sigma):
