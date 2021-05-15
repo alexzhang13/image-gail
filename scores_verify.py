@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Arguments for training")
-parser.add_argument('--path', default="./logger/val_schedule_5_1.json")
+parser.add_argument('--path', default="./logger/test_schedule_5_1.json")
 args = parser.parse_args()
 
 # Opening JSON file
@@ -18,21 +18,25 @@ data = json.load(f)
 print(len(data))
 accuracy = 0.0
 r3_accuracy = 0.0
+total = 0
 
 for i in range(len(data)):
     feat_diff = np.array(data[i]['scores'])
     min_indices = np.argmin(feat_diff, axis=1).flatten()
     r3_indices = np.argsort(feat_diff, axis=1)[:,0].flatten()
+    shape = (min_indices.shape[0])
 
     zeros = min_indices == 0
+    print(zeros.nonzero()[0])
     r3 = r3_indices < 3
-    correct = zeros.nonzero().shape[0]
-    r3_correct = r3.nonzero().shape[0]
+    correct = zeros.nonzero()[0].shape[0]
+    r3_correct = r3.nonzero()[0].shape[0]
     
-    accuracy += correct / (16)
-    r3_accuracy += r3_correct / (16)
+    total += shape
+    accuracy += correct
+    r3_accuracy += r3_correct
 
-print("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(32),r3_accuracy/(32)))
+print("[Val] [Epoch #: 1]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(total),r3_accuracy/(total)))
    
 # Closing file
 f.close()
