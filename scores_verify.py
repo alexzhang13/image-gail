@@ -27,16 +27,14 @@ for i in range(len(data)):
     shape = (min_indices.shape[0])
 
     zeros = min_indices == 0
-    print(zeros.nonzero()[0])
     r3 = r3_indices < 3
     correct = zeros.nonzero()[0].shape[0]
     r3_correct = r3.nonzero()[0].shape[0]
     
-    total += shape
-    accuracy += correct
-    r3_accuracy += r3_correct
+    accuracy += correct/shape
+    r3_accuracy += r3_correct/shape
 
-print("[Val] [Epoch #: 1]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(total),r3_accuracy/(total)))
+print("[Val] [Epoch #: 1]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(len(data)),r3_accuracy/(len(data))))
    
 # Closing file
 f.close()
