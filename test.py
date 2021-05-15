@@ -98,10 +98,10 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
     )
     full_data = []
     agent.eval_mode()
+
     with torch.no_grad():
         correct = 0
         r3_correct = 0
-        total = 0
         __iter_id = 0
         full_data = []
         for _, _iter_id, _batch in batch_iter(dl, 1):
@@ -160,7 +160,6 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
             r3 = r3_indices < 3
             correct += (zeros.nonzero().shape[0])/batch_size
             r3_correct += (r3.nonzero().shape[0])/batch_size
-            total += batch_size
             __iter_id = _iter_id
     if val:
         logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))

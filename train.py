@@ -87,7 +87,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
     with torch.no_grad():
         correct = 0
         r3_correct = 0
-        total = 0
+        __iter_id = 0
         full_data = []
         for _, _iter_id, _batch in batch_iter(dl, 1):
             batch_raw = _batch['images']
@@ -136,25 +136,25 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
                 full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
-            r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
+            r3_indices = torch.argsort(feat_diff, dim=1)
+            zero_pos = torch.argmin(r3_indices, dim=1).flatten()
 
             zeros = min_indices == 0
-            r3 = r3_indices < 3
-            correct += zeros.nonzero().shape[0]
-            r3_correct += r3.nonzero().shape[0]
-            total += batch_size
+            r3 = zero_pos < 3
+            correct += zeros.nonzero().shape[0]/batch_size
+            r3_correct += r3.nonzero().shape[0]/batch_size
+            __iter_id = _iter_id
     if val:
-        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(total),r3_correct/(total)))
-        if correct/(total) > best_val:
+        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
+        if correct/(__iter_id+1) > best_val:
             save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
             agent.save(save_path, epoch_id)
-            path = './logger/' + args.name + '.json'
+            path = './logger/val_' + args.name + '.json'
             with open(path, 'w') as outfile:
                 json.dump(full_data, outfile)
-            best_val = correct/(total)
+            best_val = correct/(__iter_id+1)
     else:
-        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(total),r3_correct/(total)))
-    
+        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
     return best_val
 
 def train_loop():
