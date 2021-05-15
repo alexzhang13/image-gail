@@ -84,9 +84,10 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
     )
 
     with torch.no_grad():
-        accuracy = 0
-        r3_accuracy = 0
-        __iter_id = 0
+        correct = 0
+        r3_correct = 0
+        total = 0
+        full_data = []
         for _, _iter_id, _batch in batch_iter(dl, 1):
             batch_raw = _batch['images']
             batch_size = batch_raw.shape[0]
@@ -106,9 +107,6 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
                 imgs = torch.reshape(imgs, (batch_size,-1))
                 references.append(imgs)
 
-            # compare candidates and reference images
-            correct = 0
-            r3_correct = 0
             # for i in range(seq_length-1):
             i = 3
             imgs = references[i]
@@ -133,10 +131,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             data['context_image_ids'] = _batch["image_id"].tolist()
             data['candidates'] = _batch["distractor_image_ids"].tolist()
             data['scores'] = feat_diff.cpu().numpy().tolist()
-
-            path = './logger/' + args.name + '.json'
-            with open(path, 'a') as outfile:
-                json.dump(data, outfile)
+            full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
@@ -145,18 +140,18 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             r3 = r3_indices < 3
             correct += zeros.nonzero().shape[0]
             r3_correct += r3.nonzero().shape[0]
-            
-            accuracy += correct / (batch_size)
-            r3_accuracy += r3_correct / (batch_size)
-            __iter_id = _iter_id
+            total += batch_size
     if val:
-        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
-        if accuracy/(__iter_id+1) > best_val:
+        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(total),r3_correct/(total)))
+        if correct/(total) > best_val:
             save_path = "./saved_models/" + args.name + "/checkpoint_" + args.name + "_epoch_" + str(epoch_id) + ".t7"
             agent.save(save_path, epoch_id)
-            best_val = accuracy/(__iter_id+1)
+            path = './logger/' + args.name + '.json'
+            with open(path, 'w') as outfile:
+                json.dump(full_data, outfile)
+            best_val = correct/(total)
     else:
-        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, accuracy/(__iter_id+1),r3_accuracy/(__iter_id+1)))
+        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(total),r3_correct/(total)))
     
     return best_val
 
