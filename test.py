@@ -97,6 +97,7 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
         collate_fn=prune_illegal_collate,
     )
     full_data = []
+    agent.eval_mode()
     with torch.no_grad():
         correct = 0
         r3_correct = 0

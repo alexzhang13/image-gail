@@ -126,13 +126,14 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
 
             # dump into json
             # _batch["image_id"], _batch["distractor_image_ids"]
-            data = {}
-            data['epoch'] = epoch_id
-            data['iter_id'] = _iter_id
-            data['context_image_ids'] = _batch["image_id"].tolist()
-            data['candidates'] = _batch["distractor_image_ids"].tolist()
-            data['scores'] = feat_diff.cpu().numpy().tolist()
-            full_data.append(data)
+            for i in range(batch_size):
+                data = {}
+                data['epoch'] = epoch_id
+                data['iter_id'] = _iter_id
+                data['context_image_ids'] = _batch["image_id"][i].tolist()
+                data['candidates'] = _batch["distractor_image_ids"][i].tolist()
+                data['scores'] = feat_diff[i].cpu().numpy().tolist()
+                full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
