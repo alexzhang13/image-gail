@@ -97,12 +97,11 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
         collate_fn=prune_illegal_collate,
     )
     full_data = []
-    agent.eval_mode()
-
+    agent.eval()
     with torch.no_grad():
         correct = 0
         r3_correct = 0
-        __iter_id = 0
+        total = 0
         full_data = []
         for _, _iter_id, _batch in batch_iter(dl, 1):
             batch_raw = _batch['images']
@@ -154,20 +153,21 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
                 full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
-            r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
+            r3_indices = torch.argsort(feat_diff, dim=1)
+            zero_pos = torch.argmin(r3_indices, dim=1).flatten()
 
             zeros = min_indices == 0
-            r3 = r3_indices < 3
-            correct += (zeros.nonzero().shape[0])/batch_size
-            r3_correct += (r3.nonzero().shape[0])/batch_size
-            __iter_id = _iter_id
+            r3 = zero_pos < 3
+            correct += zeros.nonzero().shape[0]
+            r3_correct += r3.nonzero().shape[0]
+            total += batch_size
     if val:
-        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
+        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(batch_size),r3_correct/(batch_size)))
         path = './logger/val_' + args.name + '.json'
         with open(path, 'w') as outfile:
             json.dump(full_data, outfile)
     else:
-        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
+        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(batch_size),r3_correct/(batch_size)))
         path = './logger/test_' + args.name + '.json'
         with open(path, 'w') as outfile:
             json.dump(full_data, outfile)
