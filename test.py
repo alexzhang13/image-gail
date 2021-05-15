@@ -101,6 +101,7 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
         correct = 0
         r3_correct = 0
         total = 0
+        __iter_id = 0
         full_data = []
         for _, _iter_id, _batch in batch_iter(dl, 1):
             batch_raw = _batch['images']
@@ -142,29 +143,31 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
 
             # dump into json
             # _batch["image_id"], _batch["distractor_image_ids"]
-            data = {}
-            data['epoch'] = epoch_id
-            data['iter_id'] = _iter_id
-            data['context_image_ids'] = _batch["image_id"].tolist()
-            data['candidates'] = _batch["distractor_image_ids"].tolist()
-            data['scores'] = feat_diff.cpu().numpy().tolist()
-            full_data.append(data)
+            for i in range(batch_size):
+                data = {}
+                data['epoch'] = epoch_id
+                data['iter_id'] = _iter_id
+                data['context_image_ids'] = _batch["image_id"][i].tolist()
+                data['candidates'] = _batch["distractor_image_ids"][i].tolist()
+                data['scores'] = feat_diff[i].cpu().numpy().tolist()
+                full_data.append(data)
 
             min_indices = torch.argmin(feat_diff, dim=1).flatten()
             r3_indices = torch.argsort(feat_diff, dim=1, descending=True)[:,0].flatten()
 
             zeros = min_indices == 0
             r3 = r3_indices < 3
-            correct += zeros.nonzero().shape[0]
-            r3_correct += r3.nonzero().shape[0]
+            correct += (zeros.nonzero().shape[0])/batch_size
+            r3_correct += (r3.nonzero().shape[0])/batch_size
             total += batch_size
+            __iter_id = _iter_id
     if val:
-        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/batch_size,r3_correct/batch_size))
+        logging.info("[Val] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
         path = './logger/val_' + args.name + '.json'
         with open(path, 'w') as outfile:
             json.dump(full_data, outfile)
     else:
-        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/batch_size,r3_correct/batch_size))
+        logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(__iter_id+1),r3_correct/(__iter_id+1)))
         path = './logger/test_' + args.name + '.json'
         with open(path, 'w') as outfile:
             json.dump(full_data, outfile)
