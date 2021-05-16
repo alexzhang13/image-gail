@@ -1,6 +1,7 @@
 import argparse
 import math
 import numpy as np
+import random
 import torch 
 import torch.nn as nn 
 import torchvision
@@ -35,8 +36,14 @@ print("Test name: ", args.name)
 print("Device:", device)
 
 # init random seeding
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
+def seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        
+seed(args.seed)
 
 # dataloader params
 seq_length = 5

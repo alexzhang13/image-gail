@@ -5,6 +5,7 @@ import numpy as np
 import torch 
 import torch.nn as nn 
 import torchvision
+import random
 import pdb
 import os
 from torch.utils.data import DataLoader
@@ -32,6 +33,15 @@ parser.add_argument('--name', default="")
 
 args = parser.parse_args()
 
+def seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        
+seed(args.seed)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
@@ -53,6 +63,7 @@ torch.set_printoptions(precision=10, edgeitems=1)
 seq_length = 5
 num_distractors = 4
 lr = args.lr
+
 
 params = {
         "BATCH_PER_GPU": 16,
