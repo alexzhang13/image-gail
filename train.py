@@ -1,5 +1,6 @@
 import argparse
 import math
+import random
 import numpy as np
 import torch 
 import torch.nn as nn 
@@ -38,8 +39,14 @@ print("Train name: ", args.name)
 print("Device:", device)
 
 # init random seeding
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
+def seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        
+seed(args.seed)
 torch.set_printoptions(precision=10, edgeitems=1)
 
 # dataloader params
@@ -83,7 +90,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
         collate_fn=prune_illegal_collate,
     )
 
-    agent.eval_mode()
+    # agent.eval_mode()
     with torch.no_grad():
         correct = 0
         r3_correct = 0
