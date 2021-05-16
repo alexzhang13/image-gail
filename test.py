@@ -66,7 +66,7 @@ def test_loop():
 
     # initialize models
     agent = Gail(input_dim=(2*2048), lr=args.lr, seq_length=seq_length, device=device)
-    agent.load(args.path)
+    agent.load_checkpoint(args.path)
     print("Using ", torch.cuda.device_count(), "GPUs")
 
     # Evaluation

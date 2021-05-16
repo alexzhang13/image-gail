@@ -231,7 +231,7 @@ class Gail (nn.Module):
     def load(self, save_path):
         return torch.load(save_path)
 
-    def load_checkpoint(load_path):
+    def load_checkpoint(self, load_path):
         checkpoint = torch.load(load_path)
         self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
