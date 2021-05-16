@@ -155,6 +155,11 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
             best_val = correct/(total)
     else:
         logging.info("[Test] [Epoch #: %f]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (epoch_id, correct/(total),r3_correct/(total)))
+        if best_val == -1:
+            path = './logger/test_' + args.name + '.json'
+            with open(path, 'w') as outfile:
+                json.dump(full_data, outfile)
+
     return best_val
 
 def train_loop():
@@ -229,9 +234,12 @@ def train_loop():
             print("time:%s iter id: %d, %d"%(datetime.now().strftime("%m/%d/%Y, %H:%M:%S"), epoch_id, iter_id))
 
         print("Epoch finished. Running Validation...")
+        old_val = best_val
         best_val = validation(agent, epoch_id, vist_dataset_images, True, best_val) # val set
-
-        validation(agent, epoch_id, vist_dataset_images, False, best_val) # test set 
+        if old_val < best_val:
+            validation(agent, epoch_id, vist_dataset_images, False, -1) # test set 
+        else:
+            validation(agent, epoch_id, vist_dataset_images, False, best_val) # test set 
         agent.on_epoch_end()
 
         if epoch_id >= args.freeze_epochs and freeze_resnet:
