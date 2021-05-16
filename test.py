@@ -122,9 +122,6 @@ def evaluation(agent, epoch_id, vist_dataset_images, val):
                 imgs = torch.reshape(imgs, (batch_size,-1))
                 references.append(imgs)
 
-            # compare candidates and reference images
-            correct = 0
-            r3_correct = 0
             # for i in range(seq_length-1):
             i = 3
             imgs = references[i]
