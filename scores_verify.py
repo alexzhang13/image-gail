@@ -32,8 +32,8 @@ for i in range(len(data)):
     correct = zeros.nonzero()[0].shape[0]
     r3_correct = r3.nonzero()[0].shape[0]
     
-    accuracy += correct/shape
-    r3_accuracy += r3_correct/shape
+    accuracy += correct
+    r3_accuracy += r3_correct
 
 print("[Val] [Epoch #: X]\t [Accuracy: %f]\t [R3 Accuracy: %f]\n" % (accuracy/(len(data)),r3_accuracy/(len(data))))
    

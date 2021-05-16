@@ -88,7 +88,7 @@ def validation(agent, epoch_id, vist_dataset_images, val, best_val):
         collate_fn=prune_illegal_collate,
     )
 
-    agent.eval_mode()
+    # agent.eval_mode()
     with torch.no_grad():
         correct = 0
         r3_correct = 0
