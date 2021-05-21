@@ -78,9 +78,10 @@ params = {
     }
 
 
-def normal(action, action_prob, sigma):
+def normal(action, action_prob, var):
+    sigma = math.sqrt(var)
     exponent = -0.5 * torch.pow((action - action_prob)/sigma, 2)
-    f = 1/(math.sqrt(2 * sigma * math.pi)) * torch.exp(exponent)
+    f = 1/(math.sqrt(2 * var * math.pi)) * torch.exp(exponent)
     log_probs = torch.log(f)
     prob = torch.sum(log_probs, axis=1)
     return prob
