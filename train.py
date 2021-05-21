@@ -236,7 +236,7 @@ def train_loop():
             sampled_traj = torch.unsqueeze(state, 1)
             log_probs = []
             for i in range(seq_length-1):
-                action = agent.policy(state)
+                action = agent.policy(exp_traj[:,i])
                 action_prob = torch.normal(action, args.variance)
                 log_prob = normal(action, action_prob, args.variance)
                 log_probs.append(log_prob) # L x B x 1
