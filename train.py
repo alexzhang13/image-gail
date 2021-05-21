@@ -236,11 +236,12 @@ def train_loop():
             sampled_traj = torch.unsqueeze(state, 1)
             log_probs = []
             for i in range(seq_length-1):
-                action = agent.policy(exp_traj[:,i])
+                action = agent.policy(state)
                 action_prob = torch.normal(action, args.variance)
                 log_prob = normal(action, action_prob, args.variance)
                 log_probs.append(log_prob) # L x B x 1
                 sampled_traj = torch.cat((sampled_traj, torch.unsqueeze(action_prob, 1)), 1)
+                state = action_prob
                 
             if iter_id % args.gen_per_discrim == 0:
                 discrim_loss, gen_loss = agent.update(batch_size, sampled_traj, exp_traj, log_probs, True)
